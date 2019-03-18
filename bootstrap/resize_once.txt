@@ -1,0 +1,1 @@
+This file if present makes the ishiki_bootstrap service rezise the disk and reboot the system on startup
