@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  brickd:
+    container_name: brickd
+    image: "arupiot/ishiki-brickd:latest"
+    privileged: true
+    ports:
+       - 4223:4223
+    restart: always
+  deskcontrol:
+    container_name: deskcontrol
+    image: "arupiot/deskcontrol:staging"
+    links:
+      - brickd
+    environment:
+      - SHORT_IDENT=paul
+      - BRICKD_HOST=brickd
+      - BRICKD_PORT=4223
+      - ENABLE_MODULE_INPUT=true
+      - ENABLE_MODULE_MQTT=true
+      - ENABLE_MODULE_MENU=true
+      - MQTT_BROKER_HOST=arupiot.com
+      - MQTT_CLIENT_ID=paul-test
+      - MQTT_BROKER_PORT=1883
+      - MQTT_PUBLISH_TOPIC=/ishiki/test/events
+      - MQTT_SUBSCRIBE_TOPIC=/ishiki/test/commands
+    restart: always
+    volumes:
+      - /Users/jason.brewer/Work/Projects/ishiki:/opt/ishiki/dev
+    working_dir: /opt/ishiki/dev
+  statusserver:
+    container_name: statusserver
+    image: "arupiot/ishiki-status:staging"
+    ports:
+      - 80:80
+  wpe:
+    container_name: wpe
+    image: "arupiot/balena-wpe:latest"
+    privileged: true
+    environment:
+      - WPE_URL=http://172.24.2.65
+    devices:
+       - /dev/vchiq:/dev/vchiq
+    restart: always
