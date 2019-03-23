@@ -38,6 +38,8 @@ services:
     container_name: wpe
     image: "arupiot/balena-wpe:latest"
     privileged: true
+    depends_on:
+      - "statusserver"
     environment:
       - WPE_URL=http://172.24.2.65
     devices:
