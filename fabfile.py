@@ -27,7 +27,7 @@ default_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOS
 default_hosts = ["%s:%s" % (default_host, 22)]
 renamed_hosts = ["%s.local:%s" % (NEW_HOSTNAME, 22)]
 
-CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secrets"))
+CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secrets", "keys"))
 DRIVERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "drivers"))
 
 if not os.path.exists(CERTS_DIR):
@@ -54,17 +54,17 @@ RASPBIAN_VERSION = "2018-11-13-raspbian-stretch-lite"
 
 
 @task
-def prepare(junk, screen="kedei",  mode="prod"):
+def prepare(junk, screen="kedei"):
     """
     Prepares the base image
     """
 
-    cxn = Connection(host=default_host,
+    pi_cxn = Connection(host=default_host,
                      user=ORIGINAL_USERNAME,
                      connect_kwargs={"password": ORIGINAL_PASSWORD},
                      port=22)
 
-    create_new_user(cxn)
+    create_new_user(pi_cxn)
 
     new_user_cxn = Connection(host=default_host,
                      user=NEW_USERNAME,
@@ -80,6 +80,15 @@ def prepare(junk, screen="kedei",  mode="prod"):
     configure_rsyslog(cert_cxn)
     daily_reboot(cert_cxn)
     set_hostname(cert_cxn)
+
+    # installing screen drivers as pi for waveshare quirks
+    install_screen_drivers(pi_cxn, screen)
+
+    cert_cxn.sudo('reboot now')
+
+
+@task
+def finish(junk,  mode="prod"):
     if mode == "prod":
         set_ssh_config(cert_cxn)
         reduce_writes(cert_cxn)
@@ -89,16 +98,10 @@ def prepare(junk, screen="kedei",  mode="prod"):
     else:
         raise NotImplementedError("no such mode %s" % mode)
 
-    install_screen_drivers(screen)
-    cert_cxn.sudo('reboot now')
-
-
-@task
-def finish(junk):
-    yes = Responder(pattern=r'\[Y/n\]',
-                         response='\n')
-
-    cert_cxn.sudo("apt --fix-broken install", pty=True, watchers=[yes])
+    # yes = Responder(pattern=r'\[Y/n\]',
+    #                      response='\n')
+    #
+    # cert_cxn.sudo("apt --fix-broken install", pty=True, watchers=[yes])
     delete_old_user(cert_cxn)
     add_bootstrap(cert_cxn)
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
@@ -107,14 +110,14 @@ def finish(junk):
 
 ######################################################################
 
-def install_screen_drivers(screen_name):
+def install_screen_drivers(cxn, screen_name):
 
     if screen_name == "waveshare":
-        install_waveshare_drivers(cert_cxn)
+        install_waveshare_drivers(cxn)
         config_filename = "waveshare_config.txt"
-        _add_config_file(cert_cxn, config_filename, "/boot/config.txt", "root")
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
     elif screen_name == "kedei":
-        install_kedei_drivers(cert_cxn)
+        install_kedei_drivers(cxn)
         config_filename = "kedei_config.txt"
     else:
         config_filename = "config.txt"
@@ -148,6 +151,11 @@ def create_new_user(cxn):
 
 def append_text(cxn, file_path, text):
     cxn.sudo('echo "%s" | sudo tee -a %s' % (text, file_path))
+
+
+def command_in_dir(cxn, command, dir):
+    cxn.sudo('sh -c "cd %s; %s"' % (dir, command))
+
 
 
 def configure_rsyslog(cxn):
@@ -186,7 +194,11 @@ def install_samba(cxn):
     cxn.sudo("apt-get -y install samba")
     _add_config_file(cxn, "smb.conf", "/etc/samba/smb.conf", "root")
     cxn.sudo("/etc/init.d/samba restart")
-    cxn.sudo("smbpasswd -a %s" % NEW_PASSWORD)
+
+    smbpass = Responder(pattern=r'SMB password:',
+                         response='%s\n' % NEW_PASSWORD)
+
+    cxn.sudo("smbpasswd -a %s" % NEW_USERNAME, pty=True, watchers=[smbpass])
 
 
 def install_extra_libs(cxn):
@@ -355,7 +367,9 @@ def install_waveshare_drivers(cxn):
 
 
 def waveshare_download_touchscreen_driver(cxn):
-    cxn.run('git clone https://github.com/waveshare/LCD-show.git')
+    cxn.sudo('mkdir -p /opt/waveshare')
+    # command_in_dir(cxn, "git clone https://github.com/waveshare/LCD-show.git", "/opt/waveshare")
+    cxn.sudo("git clone https://github.com/waveshare/LCD-show.git")
 
 
 def waveshare_install_touchscreen_driver(cxn):
@@ -373,10 +387,9 @@ def waveshare_install_touchscreen_driver(cxn):
     cxn.sudo('sudo sed -i \'s/console=ttyAMA0,115200//\' /boot/cmdline.txt')
     cxn.sudo('sudo sed -i \'s/kgdboc=ttyAMA0,115200//\' /boot/cmdline.txt')
 
-    yes = Responder(pattern=r'\[Y/n\]',
-                         response='\n')
+    command_in_dir(cxn, "./LCD35B-show-V2", "/home/pi/LCD-show")
+    # cxn.sudo("LCD-show/LCD35B-show-V2")
 
-    cxn.run('cd LCD-show ; sudo ./LCD35B-show-V2', watchers=[yes])
     print('Installing new kernel for Waveshare touchscreen driver completed')
 
 

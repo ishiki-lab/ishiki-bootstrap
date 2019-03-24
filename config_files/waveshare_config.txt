@@ -30,8 +30,7 @@ hdmi_force_hotplug=1
 
 # uncomment to force a HDMI mode rather than DVI. This can make audio work in
 # DMT (computer monitor) modes
-hdmi_drive=2
-hdmi_force_edid_audio=1
+#hdmi_drive=2
 
 # uncomment to increase signal to HDMI, if you have interference, blanking, or
 # no display
@@ -55,11 +54,13 @@ enable_uart=1
 
 # Enable audio (loads snd_bcm2835)
 dtparam=audio=on
-dtoverlay=waveshare35b-v2
+dtoverlay=waveshare35b-v2,swapxy=1
 #dtoverlay=ads7846,cs=1,penirq=17,penirq_pull=2,speed=1000000,keep_vref_on=1,swapxy=1,pmax=255,xohms=60,xmin=200,xmax=3900,ymin=200,ymax=3900
 hdmi_force_hotplug=1
 #max_usb_current=1
 hdmi_group=2
+hdmi_mode=1
 hdmi_mode=87
-hdmi_force_mode=1
-hdmi_cvt 800 600 60 6 0 0 0
+hdmi_cvt 480 320 60 6 0 0 0
+hdmi_drive=2
+display_rotate=0
