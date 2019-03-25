@@ -1,47 +1,46 @@
 version: '3'
 
 services:
-  brickd:
-    container_name: brickd
-    image: "arupiot/ishiki-brickd:latest"
-    privileged: true
-    ports:
-       - 4223:4223
-    restart: always
-  deskcontrol:
-    container_name: deskcontrol
-    image: "arupiot/deskcontrol:staging"
-    links:
-      - brickd
-    environment:
-      - SHORT_IDENT=paul
-      - BRICKD_HOST=brickd
-      - BRICKD_PORT=4223
-      - ENABLE_MODULE_INPUT=true
-      - ENABLE_MODULE_MQTT=true
-      - ENABLE_MODULE_MENU=true
-      - MQTT_BROKER_HOST=arupiot.com
-      - MQTT_CLIENT_ID=paul-test
-      - MQTT_BROKER_PORT=1883
-      - MQTT_PUBLISH_TOPIC=/ishiki/test/events
-      - MQTT_SUBSCRIBE_TOPIC=/ishiki/test/commands
-    restart: always
-    volumes:
-      - /Users/jason.brewer/Work/Projects/ishiki:/opt/ishiki/dev
-    working_dir: /opt/ishiki/dev
-  statusserver:
-    container_name: statusserver
-    image: "arupiot/ishiki-status:staging"
-    ports:
-      - 80:80
-  wpe:
-    container_name: wpe
-    image: "arupiot/balena-wpe:latest"
-    privileged: true
-    depends_on:
+ brickd:
+   container_name: brickd
+   image: "arupiot/ishiki-brickd:latest"
+   privileged: true
+   network_mode: host
+   restart: always
+ deskcontrol:
+   container_name: deskcontrol
+   image: "arupiot/deskcontrol:staging"
+   network_mode: host
+   environment:
+     - NAME_AUTHORITY=eightfitzroy.arupiot.com
+     - DEVICE_NAME=DSK-1
+     - SHORT_IDENT=DSK-1
+     - BRICKD_HOST=localhost
+     - BRICKD_PORT=4223
+     - ENABLE_MODULE_ZMQ=true
+     - ZMQ_PORT=5555
+     - ZMQ_TOPIC=ishiki/smart_desk
+     - ENABLE_MODULE_MENU=true
+     - ENABLE_MODULE_INPUT=true
+     - ENABLE_MODULE_SLEEP=true
+     - ENABLE_MENU_SENSOR=true
+     - ENABLE_MODULE_MQTT=true
+     - MQTT_BROKER_HOST=arupiot.com
+     - MQTT_CLIENT_ID=DSK-1
+     - MQTT_BROKER_PORT=1883
+     - MQTT_PUBLISH_TOPIC=ishiki/smart_desk/eightfitzroy.arupiot.com/DSK-1
+     - MQTT_SUBSCRIBE_TOPIC=ishiki/smart_desk/eightfitzroy.arupiot.com/DSK-1/command
+     - SENTRY_URL=https://47ba8b60e8994fd1a5979cad36185cad@sentry.io/1391137
+   restart: always
+ wpe:
+   container_name: wpe
+   image: "arupiot/balena-wpe:latest"
+   network_mode: host
+   privileged: true
+   depends_on:
       - "statusserver"
     environment:
-      - WPE_URL=http://172.24.2.65
-    devices:
-       - /dev/vchiq:/dev/vchiq
-    restart: always
+      - WPE_URL=http://statusserver
+   devices:
+      - /dev/vchiq:/dev/vchiq
+   restart: always
