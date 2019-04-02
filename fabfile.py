@@ -3,6 +3,8 @@ from fabric import Connection
 from invoke import Responder
 from fabric import task
 from patchwork.files import append
+import json
+import uuid
 
 
 
@@ -20,7 +22,8 @@ from config import (NEW_PASSWORD,
                     ORIGINAL_PASSWORD,
                     ORIGINAL_USERNAME,
                     ACCESS_IP,
-                    CERTS_NAME
+                    CERTS_NAME,
+                    TUNNEL_CERTS_NAME
                     )
 
 default_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
@@ -29,6 +32,7 @@ renamed_hosts = ["%s.local:%s" % (NEW_HOSTNAME, 22)]
 
 CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secrets", "keys"))
 DRIVERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "drivers"))
+USB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "usb"))
 
 if not os.path.exists(CERTS_DIR):
     raise Exception("couldn't find certs")
@@ -51,6 +55,60 @@ cert_cxn = Connection(host=default_host,
                       port=22)
 
 RASPBIAN_VERSION = "2018-11-13-raspbian-stretch-lite"
+
+@task
+def settings(junk, number):
+
+    public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERTS_NAME)
+    private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERTS_NAME)
+
+    with open(public_key_file, "r") as f:
+        public_key = f.read()
+
+    with open(private_key_file, "r") as f:
+        private_key = f.read()
+
+    # private_key = private.exportKey('PEM').decode("utf-8")
+    # public_key = public.exportKey('OpenSSH').decode("utf-8")
+
+    device_uuid = str(uuid.uuid4())
+
+    name = "DSK-%s" % number
+
+    settings = {
+        "name": name,
+        "description": "An ishiki desk",
+        "url": "https://eightfitzroy.arupiot.com/ishiki/%s" % name,
+        "public_key": public_key,
+        "private_key": private_key,
+        "uuid": device_uuid,
+        "host_name": "ishiki-%s" % name,
+        "tunnel_host": "35.205.94.204",
+        "docker_tunnel_port": "%s" % (5000 + int(number)),
+        "admin_tunnel_port": "%s" % (7000 + int(number)),
+        "tunnel_user": "ishiki_tunnel",
+        "time_zone": "Europe/London",
+        "ssid": "nyquist-dev",
+        "psk": "D1git4lAcce55",
+        "eth0_address": "",
+        "eth0_netmask": "",
+        "eth0_gateway": "",
+        "wlan0_address": "",
+        "wlan0_netmask": "",
+        "wlan0_gateway": ""
+    }
+
+    usb_dir = os.path.join(USB_DIR, name)
+
+    if not os.path.exists(usb_dir):
+        os.makedirs(usb_dir)
+
+    path = os.path.join(usb_dir, "settings.json")
+
+    with open(path, "w") as f:
+        f.write(json.dumps(settings, sort_keys=True, indent=4))
+
+
 
 
 @task
@@ -88,7 +146,10 @@ def prepare(junk, screen="kedei"):
 
 
 @task
-def finish(junk,  mode="prod"):
+def finish(junk, screen="kedei", mode="prod"):
+
+    update_boot_config(cert_cxn, screen)
+
     if mode == "prod":
         set_ssh_config(cert_cxn)
         reduce_writes(cert_cxn)
@@ -98,10 +159,6 @@ def finish(junk,  mode="prod"):
     else:
         raise NotImplementedError("no such mode %s" % mode)
 
-    # yes = Responder(pattern=r'\[Y/n\]',
-    #                      response='\n')
-    #
-    # cert_cxn.sudo("apt --fix-broken install", pty=True, watchers=[yes])
     delete_old_user(cert_cxn)
     add_bootstrap(cert_cxn)
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
@@ -109,6 +166,19 @@ def finish(junk,  mode="prod"):
 
 
 ######################################################################
+
+def update_boot_config(cxn, screen_name):
+
+    if screen_name == "waveshare":
+        config_filename = "waveshare_config.txt"
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
+    elif screen_name == "kedei":
+        install_kedei_drivers(cxn)
+        config_filename = "kedei_config.txt"
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
+    else:
+        config_filename = "config.txt"
+
 
 def install_screen_drivers(cxn, screen_name):
 

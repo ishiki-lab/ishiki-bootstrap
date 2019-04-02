@@ -46,19 +46,14 @@ working on a network where the host broadcast works or other devious means.
 * Copy `config_local.py` from secrets into the root of the repo
 * Edit your new local `config_local.py` to add the ip address of the pi
 * Copy the whole folder `secrets` in next to the root of this repo
-* Run fab `prepare_card_1`. You will be asked for the password to set for the new user `lush`,
+* Run `fab prepare --screen=<screen_name>`. screen_name can be `waveshare` or `kedei`,
 * Wait for pi to reboot and settle down
-* Run second part of build (mode can be dev or prod) `fab finish --mode=dev`
+* Run second part of build (mode can be dev or prod) `fab finish --mode=<mode> --screen=<screen_name>`. mode can be either `dev` or `prod`, screen_name can be `waveshare` or `kedei`,
 * Wait for pi to finish installing things and shut itself down
 * Remove the sd card from pi and take a copy of the image with `dd` something,
  like `sudo dd if=/dev/rdisk2 of=/Users/paul/Documents/lush_prod.img bs=1m` but with a path on your machine
 
 
-
-### To build a new card
-
-install fabric
-`pip install fabric`
 
 
 

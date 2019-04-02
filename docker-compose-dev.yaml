@@ -30,7 +30,6 @@ services:
       - MQTT_BROKER_PORT=1883
       - MQTT_PUBLISH_TOPIC=ishiki/smart_desk/eightfitzroy.arupiot.com/DSK-1
       - MQTT_SUBSCRIBE_TOPIC=ishiki/smart_desk/eightfitzroy.arupiot.com/DSK-1/command
-      - SENTRY_URL=https://47ba8b60e8994fd1a5979cad36185cad@sentry.io/1391137
     restart: always
   statusserver:
     container_name: statusserver
