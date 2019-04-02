@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  brickd:
+    container_name: brickd
+    image: "arupiot/ishiki-brickd:latest"
+    privileged: true
+    network_mode: host
+    restart: always
+  deskcontrol:
+    container_name: deskcontrol
+    image: "arupiot/deskcontrol:staging"
+    network_mode: host
+    environment:
+      - NAME_AUTHORITY=eightfitzroy.arupiot.com
+      - DEVICE_NAME=DSK-1
+      - SHORT_IDENT=DSK-1
+      - BRICKD_HOST=localhost
+      - BRICKD_PORT=4223
+      - ENABLE_MODULE_ZMQ=true
+      - ZMQ_PORT=5555
+      - ZMQ_TOPIC=ishiki/smart_desk
+      - ENABLE_MODULE_MENU=true
+      - ENABLE_MODULE_INPUT=true
+      - ENABLE_MODULE_SLEEP=true
+      - ENABLE_MENU_SENSOR=true
+      - ENABLE_MODULE_MQTT=true
+      - MQTT_BROKER_HOST=arupiot.com
+      - MQTT_CLIENT_ID=DSK-1
+      - MQTT_BROKER_PORT=1883
+      - MQTT_PUBLISH_TOPIC=ishiki/smart_desk/eightfitzroy.arupiot.com/DSK-1
+      - MQTT_SUBSCRIBE_TOPIC=ishiki/smart_desk/eightfitzroy.arupiot.com/DSK-1/command
+      - SENTRY_URL=https://47ba8b60e8994fd1a5979cad36185cad@sentry.io/1391137
+    restart: always
+  statusserver:
+    container_name: statusserver
+    image: "arupiot/ishiki-status:staging"
+    network_mode: host
+    volumes:
+      - /media/usb:/media/usb
+    ports:
+      - 80:80
+    healthcheck:
+        test: ["CMD-SHELL", "curl -f http://localhost:80 && echo 'OK'"]
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart: always    
+  wpe:
+    container_name: wpe
+    image: "arupiot/balena-wpe:latest"
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "statusserver"
+    environment:
+      - WPE_URL=http://localhost
+    devices:
+      - /dev/vchiq:/dev/vchiq
+    restart: always
