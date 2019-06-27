@@ -26,9 +26,11 @@ from config import (NEW_PASSWORD,
                     TUNNEL_CERTS_NAME
                     )
 
-default_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
-default_hosts = ["%s:%s" % (default_host, 22)]
-renamed_hosts = ["%s.local:%s" % (NEW_HOSTNAME, 22)]
+origional_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
+new_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % NEW_HOSTNAME
+
+# default_hosts = ["%s:%s" % (default_host, 22)]
+# renamed_hosts = ["%s.local:%s" % (NEW_HOSTNAME, 22)]
 
 CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secrets", "keys"))
 DRIVERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "drivers"))
@@ -47,14 +49,14 @@ def get_cert_path(private=False, certs_name=CERTS_NAME):
 
 cert_path = get_cert_path(private=True)
 
-cert_cxn = Connection(host=default_host,
+cert_cxn = Connection(host=origional_host,
                       user=NEW_USERNAME,
                       connect_kwargs={
                           "key_filename": cert_path,
                       },
                       port=22)
 
-RASPBIAN_VERSION = "2018-11-13-raspbian-stretch-lite"
+RASPBIAN_VERSION = "2019-04-08-raspbian-stretch-lite"
 
 @task
 def settings(junk, number):
@@ -109,22 +111,20 @@ def settings(junk, number):
         f.write(json.dumps(settings, sort_keys=True, indent=4))
 
 
-
-
 @task
 def prepare(junk, screen="kedei"):
     """
     Prepares the base image
     """
 
-    pi_cxn = Connection(host=default_host,
+    pi_cxn = Connection(host=origional_host,
                      user=ORIGINAL_USERNAME,
                      connect_kwargs={"password": ORIGINAL_PASSWORD},
                      port=22)
 
     create_new_user(pi_cxn)
 
-    new_user_cxn = Connection(host=default_host,
+    new_user_cxn = Connection(host=origional_host,
                      user=NEW_USERNAME,
                      connect_kwargs={"password": NEW_PASSWORD},
                      port=22)
@@ -137,11 +137,10 @@ def prepare(junk, screen="kedei"):
     remove_bloat(cert_cxn)
     configure_rsyslog(cert_cxn)
     daily_reboot(cert_cxn)
-    set_hostname(cert_cxn)
+    _add_config_file(cert_cxn, "wpa_supplicant.backup", "/etc/wpa_supplicant/wpa_supplicant.backup", "root", chmod="644")
 
     # installing screen drivers as pi for waveshare quirks
     install_screen_drivers(pi_cxn, screen)
-
     cert_cxn.sudo('reboot now')
 
 
@@ -151,17 +150,16 @@ def finish(junk, screen="kedei", mode="prod"):
     update_boot_config(cert_cxn, screen)
 
     if mode == "prod":
-        set_ssh_config(cert_cxn)
         reduce_writes(cert_cxn)
-    elif mode == "dev":
-        install_samba(cert_cxn)
-        set_ssh_config_dev(cert_cxn)
     else:
-        raise NotImplementedError("no such mode %s" % mode)
+        install_samba(cert_cxn)
+
+    set_ssh_config(cert_cxn, mode)
 
     delete_old_user(cert_cxn)
     add_bootstrap(cert_cxn)
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
+    set_hostname(cert_cxn)
     cert_cxn.sudo('shutdown now')
 
 
@@ -244,13 +242,11 @@ def copy_certs(cxn):
     cxn.run("chmod 600 /home/%s/.ssh/authorized_keys" % NEW_USERNAME)
 
 
-def set_ssh_config(cxn):
-    _add_config_file(cxn, "sshd_config", "/etc/ssh/sshd_config", "root", chmod="600")
-    cxn.sudo("systemctl restart ssh")
-
-
-def set_ssh_config_dev(cxn):
-    _add_config_file(cxn, "sshd_config_dev", "/etc/ssh/sshd_config", "root", chmod="600")
+def set_ssh_config(cxn, mode):
+    if mode == "dev":
+        _add_config_file(cxn, "sshd_config_dev", "/etc/ssh/sshd_config", "root", chmod="600")
+    else:
+        _add_config_file(cxn, "sshd_config", "/etc/ssh/sshd_config", "root", chmod="600")
     cxn.sudo("systemctl restart ssh")
 
 
@@ -273,7 +269,9 @@ def install_samba(cxn):
 
 def install_extra_libs(cxn):
     cxn.sudo("apt-get update")
-    cxn.sudo("apt-get -y install git cmake ntp autossh libxi6")
+    cxn.sudo("pip install wheel")
+    cxn.sudo("pip install --upgrade pip")
+    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python-cryptography git cmake ntp autossh libxi6 libffi-dev")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
 
@@ -446,7 +444,7 @@ def waveshare_install_touchscreen_driver(cxn):
 
     # Enable I2C
     # See https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c#installing-kernel-support-manually
-
+    cxn.sudo("mkdir -p /boot/overlays")
     cxn.sudo('echo "dtparam=i2c1=on" | sudo tee -a /boot/config.txt')
     cxn.sudo('echo "dtparam=i2c_arm=on" | sudo tee -a /boot/config.txt')
     cxn.sudo('echo "i2c-bcm2708" | sudo tee -a /etc/modules')

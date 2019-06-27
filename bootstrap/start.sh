@@ -12,14 +12,19 @@ if [ -f /opt/ishiki/bootstrap/resize_once.txt ]; then
     exit 0
 fi
 
+systemctl stop dhcpcd
+
 if [ -f /media/usb/docker-compose.yaml ]; then
     echo "docker compose pull"
+    docker-compose -f /media/usb/docker-compose.yaml stop
     docker-compose -f /media/usb/docker-compose.yaml pull
-    docker-compose -f /media/usb/docker-compose.yaml down
     echo "docker compose up"
     docker-compose -f /media/usb/docker-compose.yaml up --force-recreate -d
     docker system prune --force
 fi
+
+sleep 10
+systemctl start dhcpcd
 
 echo "monitoring usb"
 python3 /opt/ishiki/bootstrap/monitor.py

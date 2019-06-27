@@ -9,7 +9,7 @@ import grp
 from mount import *
 
 MOUNT_DIR = "/media/usb"
-USERNAME = "ishiki"
+USERNAME = "lush"
 WPA_SUPPLICANT_FILE = "/etc/wpa_supplicant/wpa_supplicant.conf"
 
 def start():
@@ -23,18 +23,7 @@ def start():
         with open(settings_file, "r") as f:
             settings = json.loads(f.read())
 
-        existing_settings_file = "/opt/ishiki/bootstrap/settings.json"
-        if os.path.exists(existing_settings_file):
-            with open(existing_settings_file, "r") as f:
-                try:
-                    existing_settings = json.loads(f.read())
-                except Exception as e:
-                    existing_settings = None
-            os.remove(existing_settings_file)
-        else:
-            existing_settings = None
-
-        # these functions must be idempotent and check first before updating anything
+        # these functions should ideally be idempotent and check first before updating anything
 
         clear_old_wifi()
 
@@ -49,7 +38,6 @@ def start():
         else:
             print("Bootstrap: No ssid given")
 
-
         # configure eth0 ip address
         interface = "eth0"
         address = settings.get("eth0_address")
@@ -57,11 +45,23 @@ def start():
         router = settings.get("eth0_router")
         set_ip_address(interface, address=address, netmask=netmask, router=router)
 
-        # configure wlan0 ip address
+        captive_portal = settings.get("captive_portal")
+
+        if captive_portal:
+            # configure ap address
+            interface = "uap0"
+            address = "192.168.1.1"
+            netmask = "24"
+            set_ap_dhcpdc_conf(interface, address=address, netmask=netmask)
+            address = None
+            netmask = None
+            router = None
+        else:
+            address = settings.get("wlan0_address")
+            netmask = settings.get("wlan0_netmask")
+            router = settings.get("wlan0_router")
+
         interface = "wlan0"
-        address = settings.get("wlan0_address")
-        netmask = settings.get("wlan0_netmask")
-        router = settings.get("wlan0_router")
         set_ip_address(interface, address=address, netmask=netmask, router=router)
 
         subprocess.call(['sudo', 'systemctl', 'daemon-reload'])
@@ -88,30 +88,12 @@ def start():
         docker_tunnel_port = settings.get("docker_tunnel_port")
         admin_tunnel_port = settings.get("admin_tunnel_port")
         tunnel_user = settings.get("tunnel_user")
+
         if tunnel_host and docker_tunnel_port and admin_tunnel_port and tunnel_user:
-            if existing_settings:
-                existing_tunnel_host = existing_settings.get("tunnel_host")
-                existing_docker_tunnel_port = existing_settings.get("docker_tunnel_port")
-                existing_admin_tunnel_port = existing_settings.get("admin_tunnel_port")
-                if existing_tunnel_host != tunnel_host or \
-                        existing_docker_tunnel_port != existing_docker_tunnel_port or \
-                        existing_admin_tunnel_port != existing_admin_tunnel_port:
-                    print("Bootstrap: Docker tunnel configured to %s on port %s" % (tunnel_host, docker_tunnel_port))
-                    configure_ssh_tunnel(tunnel_host, docker_tunnel_port, tunnel_user, "2375", "docker_tunnel")
-                    print("Bootstrap: SSH tunnel configured to %s on port %s" % (tunnel_host, admin_tunnel_port))
-                    configure_ssh_tunnel(tunnel_host, admin_tunnel_port, tunnel_user, "22", "admin_tunnel")
-                else:
-                    print("Bootstrap: Docker tunnel already configured to %s on port %s" % (tunnel_host, docker_tunnel_port))
-                    print("Bootstrap: SSH tunnel already configured to %s on port %s" % (
-                    tunnel_host, admin_tunnel_port))
-            else:
-                print("Bootstrap: Docker tunnel configured to %s on port %s" % (tunnel_host, docker_tunnel_port))
-                configure_ssh_tunnel(tunnel_host, docker_tunnel_port, tunnel_user, "2375", "docker_tunnel")
-                print("Bootstrap: SSH tunnel configured to %s on port %s" % (tunnel_host, admin_tunnel_port))
-                configure_ssh_tunnel(tunnel_host, admin_tunnel_port, tunnel_user, "22", "admin_tunnel")
-
-        shutil.copy(settings_file, existing_settings_file)
-
+            print("Bootstrap: Docker tunnel configured to %s on port %s" % (tunnel_host, docker_tunnel_port))
+            configure_ssh_tunnel(tunnel_host, docker_tunnel_port, tunnel_user, "2375", "docker_tunnel")
+            print("Bootstrap: SSH tunnel configured to %s on port %s" % (tunnel_host, admin_tunnel_port))
+            configure_ssh_tunnel(tunnel_host, admin_tunnel_port, tunnel_user, "22", "admin_tunnel")
     else:
         print("Bootstrap: Failed to find the ishiki USB")
 
@@ -121,14 +103,7 @@ def _replace_template_text(text, name, value):
 
 
 def clear_old_wifi():
-
-    with open("/etc/wpa_supplicant/wpa_supplicant.conf", "r") as f:
-        t = f.read()
-
-    t = t[:t.find("network")]
-
-    with open("/etc/wpa_supplicant/wpa_supplicant.conf", "w") as f:
-        f.write(t)
+    shutil.copyfile("/etc/wpa_supplicant/wpa_supplicant.backup", "/etc/wpa_supplicant/wpa_supplicant.conf")
 
 
 def configure_ssh_tunnel(tunnel_host, tunnel_port, tunnel_user, dst_port, service_name):
@@ -318,6 +293,43 @@ static domain_name_servers=8.8.8.8 8.8.4.4
         f.write(config)
 
 
+def set_ap_dhcpdc_conf(interface, address=None, netmask=None):
+
+    start_tag = "# ***** begin ishiki templated static ip for %s *****" % interface
+    end_tag = "# ***** end ishiki templated static ip for %s *****" % interface
+
+    template = """
+
+%s
+interface %s
+static ip_address=%s/%s
+nohook wpa_supplicant
+%s
+
+"""
+
+    attr = (start_tag, interface, address, netmask, router, end_tag)
+
+    with open("/etc/dhcpcd.conf", "r") as f:
+        current_config = f.read()
+
+    if start_tag in current_config:
+        config = current_config[:current_config.find(start_tag)] + current_config[
+                                                                   current_config.find(end_tag) + len(end_tag):]
+    else:
+        config = current_config
+
+    if address:
+        config = config + template % attr
+
+    ## remove too much white space
+    while "\n\n\n" in config:
+        config = config.replace("\n\n\n", "\n\n")
+
+    with open("/etc/dhcpcd.conf", "w") as f:
+        f.write(config)
+
+
 def set_ip_address(interface, address=None, netmask=None, router=None):
 
     if address:
@@ -327,8 +339,6 @@ def set_ip_address(interface, address=None, netmask=None, router=None):
     rewrite_dhcpdc_conf(interface, address=address, netmask=netmask, router=router)
     cmd = "sudo ip addr flush dev %s" % interface
     subprocess.call(cmd, shell=True)
-
-
 
 
 if __name__ == '__main__':
