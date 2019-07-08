@@ -49,14 +49,12 @@ def start():
 
         if captive_portal:
             # configure ap address
-            interface = "uap0"
-            address = "192.168.1.1"
-            netmask = "24"
-            set_ap_dhcpdc_conf(interface, address=address, netmask=netmask)
+            set_ap_dhcpdc_conf("uap0", address="192.168.1.1", netmask="24")
             address = None
             netmask = None
             router = None
         else:
+            set_ap_dhcpdc_conf("uap0", address=None, netmask=None)
             address = settings.get("wlan0_address")
             netmask = settings.get("wlan0_netmask")
             router = settings.get("wlan0_router")
@@ -308,7 +306,7 @@ nohook wpa_supplicant
 
 """
 
-    attr = (start_tag, interface, address, netmask, router, end_tag)
+    attr = (start_tag, interface, address, netmask, end_tag)
 
     with open("/etc/dhcpcd.conf", "r") as f:
         current_config = f.read()
