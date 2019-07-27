@@ -9,7 +9,7 @@ import grp
 from mount import *
 
 MOUNT_DIR = "/media/usb"
-USERNAME = "lush"
+USERNAME = "ishiki"
 WPA_SUPPLICANT_FILE = "/etc/wpa_supplicant/wpa_supplicant.conf"
 
 def start():
