@@ -3,8 +3,8 @@ from fabric import Connection
 from invoke import Responder
 from fabric import task
 from patchwork.files import append
-
-
+import json
+import uuid
 
 import os
 import logging
@@ -20,15 +20,19 @@ from config import (NEW_PASSWORD,
                     ORIGINAL_PASSWORD,
                     ORIGINAL_USERNAME,
                     ACCESS_IP,
-                    CERTS_NAME
+                    CERTS_NAME,
+                    TUNNEL_CERTS_NAME
                     )
 
-default_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
-default_hosts = ["%s:%s" % (default_host, 22)]
-renamed_hosts = ["%s.local:%s" % (NEW_HOSTNAME, 22)]
+origional_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
+new_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % NEW_HOSTNAME
 
-CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secrets"))
+# default_hosts = ["%s:%s" % (default_host, 22)]
+# renamed_hosts = ["%s.local:%s" % (NEW_HOSTNAME, 22)]
+
+CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secrets", "keys"))
 DRIVERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "drivers"))
+USB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "usb"))
 
 if not os.path.exists(CERTS_DIR):
     raise Exception("couldn't find certs")
@@ -43,30 +47,82 @@ def get_cert_path(private=False, certs_name=CERTS_NAME):
 
 cert_path = get_cert_path(private=True)
 
-cert_cxn = Connection(host=default_host,
+cert_cxn = Connection(host=origional_host,
                       user=NEW_USERNAME,
                       connect_kwargs={
                           "key_filename": cert_path,
                       },
                       port=22)
 
-RASPBIAN_VERSION = "2018-11-13-raspbian-stretch-lite"
+RASPBIAN_VERSION = "2019-04-08-raspbian-stretch-lite"
+
+@task
+def settings(junk, number):
+
+    public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERTS_NAME)
+    private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERTS_NAME)
+
+    with open(public_key_file, "r") as f:
+        public_key = f.read()
+
+    with open(private_key_file, "r") as f:
+        private_key = f.read()
+
+    # private_key = private.exportKey('PEM').decode("utf-8")
+    # public_key = public.exportKey('OpenSSH').decode("utf-8")
+
+    device_uuid = str(uuid.uuid4())
+
+    name = "DSK-%s" % number
+
+    settings = {
+        "name": name,
+        "description": "An ishiki desk",
+        "url": "https://eightfitzroy.arupiot.com/ishiki/%s" % name,
+        "public_key": public_key,
+        "private_key": private_key,
+        "uuid": device_uuid,
+        "host_name": "ishiki-%s" % name,
+        "tunnel_host": "35.205.94.204",
+        "docker_tunnel_port": "%s" % (5000 + int(number)),
+        "admin_tunnel_port": "%s" % (7000 + int(number)),
+        "tunnel_user": "ishiki_tunnel",
+        "time_zone": "Europe/London",
+        "ssid": "nyquist-dev",
+        "psk": "D1git4lAcce55",
+        "eth0_address": "",
+        "eth0_netmask": "",
+        "eth0_gateway": "",
+        "wlan0_address": "",
+        "wlan0_netmask": "",
+        "wlan0_gateway": ""
+    }
+
+    usb_dir = os.path.join(USB_DIR, name)
+
+    if not os.path.exists(usb_dir):
+        os.makedirs(usb_dir)
+
+    path = os.path.join(usb_dir, "settings.json")
+
+    with open(path, "w") as f:
+        f.write(json.dumps(settings, sort_keys=True, indent=4))
 
 
 @task
-def prepare(junk, screen="kedei",  mode="prod"):
+def prepare(junk, screen=None):
     """
     Prepares the base image
     """
 
-    cxn = Connection(host=default_host,
+    pi_cxn = Connection(host=origional_host,
                      user=ORIGINAL_USERNAME,
                      connect_kwargs={"password": ORIGINAL_PASSWORD},
                      port=22)
 
-    create_new_user(cxn)
+    create_new_user(pi_cxn)
 
-    new_user_cxn = Connection(host=default_host,
+    new_user_cxn = Connection(host=origional_host,
                      user=NEW_USERNAME,
                      connect_kwargs={"password": NEW_PASSWORD},
                      port=22)
@@ -79,42 +135,56 @@ def prepare(junk, screen="kedei",  mode="prod"):
     remove_bloat(cert_cxn)
     configure_rsyslog(cert_cxn)
     daily_reboot(cert_cxn)
-    set_hostname(cert_cxn)
-    if mode == "prod":
-        set_ssh_config(cert_cxn)
-        reduce_writes(cert_cxn)
-    elif mode == "dev":
-        install_samba(cert_cxn)
-        set_ssh_config_dev(cert_cxn)
-    else:
-        raise NotImplementedError("no such mode %s" % mode)
+    _add_config_file(cert_cxn, "wpa_supplicant.backup", "/etc/wpa_supplicant/wpa_supplicant.backup", "root", chmod="644")
 
-    install_screen_drivers(screen)
+    # installing screen drivers as pi for waveshare quirks
+    if screen:
+        install_screen_drivers(pi_cxn, screen)
     cert_cxn.sudo('reboot now')
 
 
 @task
-def finish(junk):
-    yes = Responder(pattern=r'\[Y/n\]',
-                         response='\n')
+def finish(junk, screen=None, mode="prod"):
 
-    cert_cxn.sudo("apt --fix-broken install", pty=True, watchers=[yes])
+    update_boot_config(cert_cxn, screen)
+
+    if mode == "prod":
+        reduce_writes(cert_cxn)
+    else:
+        install_samba(cert_cxn)
+
+    set_ssh_config(cert_cxn, mode)
+
     delete_old_user(cert_cxn)
     add_bootstrap(cert_cxn)
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
+    set_hostname(cert_cxn)
     cert_cxn.sudo('shutdown now')
 
 
 ######################################################################
 
-def install_screen_drivers(screen_name):
+def update_boot_config(cxn, screen_name):
 
     if screen_name == "waveshare":
-        install_waveshare_drivers(cert_cxn)
         config_filename = "waveshare_config.txt"
-        _add_config_file(cert_cxn, config_filename, "/boot/config.txt", "root")
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
     elif screen_name == "kedei":
-        install_kedei_drivers(cert_cxn)
+        install_kedei_drivers(cxn)
+        config_filename = "kedei_config.txt"
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
+    else:
+        config_filename = "config.txt"
+
+
+def install_screen_drivers(cxn, screen_name):
+
+    if screen_name == "waveshare":
+        install_waveshare_drivers(cxn)
+        config_filename = "waveshare_config.txt"
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
+    elif screen_name == "kedei":
+        install_kedei_drivers(cxn)
         config_filename = "kedei_config.txt"
     else:
         config_filename = "config.txt"
@@ -150,6 +220,11 @@ def append_text(cxn, file_path, text):
     cxn.sudo('echo "%s" | sudo tee -a %s' % (text, file_path))
 
 
+def command_in_dir(cxn, command, dir):
+    cxn.sudo('sh -c "cd %s; %s"' % (dir, command))
+
+
+
 def configure_rsyslog(cxn):
     _add_config_file(cxn, "rsyslog.conf", "/etc/rsyslog.conf", "root", chmod="644")
 
@@ -166,32 +241,36 @@ def copy_certs(cxn):
     cxn.run("chmod 600 /home/%s/.ssh/authorized_keys" % NEW_USERNAME)
 
 
-def set_ssh_config(cxn):
-    _add_config_file(cxn, "sshd_config", "/etc/ssh/sshd_config", "root", chmod="600")
-    cxn.sudo("systemctl restart ssh")
-
-
-def set_ssh_config_dev(cxn):
-    _add_config_file(cxn, "sshd_config_dev", "/etc/ssh/sshd_config", "root", chmod="600")
+def set_ssh_config(cxn, mode):
+    if mode == "dev":
+        _add_config_file(cxn, "sshd_config_dev", "/etc/ssh/sshd_config", "root", chmod="600")
+    else:
+        _add_config_file(cxn, "sshd_config", "/etc/ssh/sshd_config", "root", chmod="600")
     cxn.sudo("systemctl restart ssh")
 
 
 def install_pip(cxn):
     cxn.sudo("apt-get update")
-    cxn.sudo("apt-get install -y curl")
-    cxn.sudo("curl --silent --show-error --retry 5 https://bootstrap.pypa.io/" "get-pip.py | sudo python3")
-
+    cxn.sudo("apt-get install -y curl python3-distutils python3-testresources")
+    cxn.sudo("curl https://bootstrap.pypa.io/get-pip.py | sudo python3")
+    #cxn.sudo("curl --silent --show-error --retry 5 https://bootstrap.pypa.io/" "get-pip.py | sudo python3")
 
 def install_samba(cxn):
     cxn.sudo("apt-get -y install samba")
     _add_config_file(cxn, "smb.conf", "/etc/samba/smb.conf", "root")
-    cxn.sudo("/etc/init.d/samba restart")
-    cxn.sudo("smbpasswd -a %s" % NEW_PASSWORD)
+    cxn.sudo("/etc/init.d/samba-ad-dc restart")
+
+    smbpass = Responder(pattern=r'SMB password:',
+                         response='%s\n' % NEW_PASSWORD)
+
+    cxn.sudo("smbpasswd -a %s" % NEW_USERNAME, pty=True, watchers=[smbpass])
 
 
 def install_extra_libs(cxn):
     cxn.sudo("apt-get update")
-    cxn.sudo("apt-get -y install git cmake ntp autossh libxi6")
+    cxn.sudo("pip install --user wheel")
+    cxn.sudo("pip install --upgrade pip")
+    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python3-distutils python3-testresources python-cryptography git cmake ntp autossh libxi6 libffi-dev")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
 
@@ -355,14 +434,16 @@ def install_waveshare_drivers(cxn):
 
 
 def waveshare_download_touchscreen_driver(cxn):
-    cxn.run('git clone https://github.com/waveshare/LCD-show.git')
+    cxn.sudo('mkdir -p /opt/waveshare')
+    # command_in_dir(cxn, "git clone https://github.com/waveshare/LCD-show.git", "/opt/waveshare")
+    cxn.sudo("git clone https://github.com/waveshare/LCD-show.git")
 
 
 def waveshare_install_touchscreen_driver(cxn):
 
     # Enable I2C
     # See https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c#installing-kernel-support-manually
-
+    cxn.sudo("mkdir -p /boot/overlays")
     cxn.sudo('echo "dtparam=i2c1=on" | sudo tee -a /boot/config.txt')
     cxn.sudo('echo "dtparam=i2c_arm=on" | sudo tee -a /boot/config.txt')
     cxn.sudo('echo "i2c-bcm2708" | sudo tee -a /etc/modules')
@@ -373,10 +454,9 @@ def waveshare_install_touchscreen_driver(cxn):
     cxn.sudo('sudo sed -i \'s/console=ttyAMA0,115200//\' /boot/cmdline.txt')
     cxn.sudo('sudo sed -i \'s/kgdboc=ttyAMA0,115200//\' /boot/cmdline.txt')
 
-    yes = Responder(pattern=r'\[Y/n\]',
-                         response='\n')
+    command_in_dir(cxn, "./LCD35B-show-V2", "/home/pi/LCD-show")
+    # cxn.sudo("LCD-show/LCD35B-show-V2")
 
-    cxn.run('cd LCD-show ; sudo ./LCD35B-show-V2', watchers=[yes])
     print('Installing new kernel for Waveshare touchscreen driver completed')
 
 

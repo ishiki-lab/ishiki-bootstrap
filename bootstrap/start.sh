@@ -13,9 +13,12 @@ if [ -f /opt/ishiki/bootstrap/resize_once.txt ]; then
 fi
 
 if [ -f /media/usb/docker-compose.yaml ]; then
-    echo "docker compose up"
+    echo "docker compose pull"
+    docker-compose -f /media/usb/docker-compose.yaml stop
     docker-compose -f /media/usb/docker-compose.yaml pull
+    echo "docker compose up"
     docker-compose -f /media/usb/docker-compose.yaml up --force-recreate -d
+    docker system prune --force
 fi
 
 echo "monitoring usb"
