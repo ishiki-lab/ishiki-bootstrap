@@ -6,8 +6,6 @@ from patchwork.files import append
 import json
 import uuid
 
-
-
 import os
 import logging
 
@@ -112,7 +110,7 @@ def settings(junk, number):
 
 
 @task
-def prepare(junk, screen="kedei"):
+def prepare(junk, screen=None):
     """
     Prepares the base image
     """
@@ -140,12 +138,13 @@ def prepare(junk, screen="kedei"):
     _add_config_file(cert_cxn, "wpa_supplicant.backup", "/etc/wpa_supplicant/wpa_supplicant.backup", "root", chmod="644")
 
     # installing screen drivers as pi for waveshare quirks
-    install_screen_drivers(pi_cxn, screen)
+    if screen:
+        install_screen_drivers(pi_cxn, screen)
     cert_cxn.sudo('reboot now')
 
 
 @task
-def finish(junk, screen="kedei", mode="prod"):
+def finish(junk, screen=None, mode="prod"):
 
     update_boot_config(cert_cxn, screen)
 
@@ -252,14 +251,14 @@ def set_ssh_config(cxn, mode):
 
 def install_pip(cxn):
     cxn.sudo("apt-get update")
-    cxn.sudo("apt-get install -y curl")
-    cxn.sudo("curl --silent --show-error --retry 5 https://bootstrap.pypa.io/" "get-pip.py | sudo python3")
-
+    cxn.sudo("apt-get install -y curl python3-distutils python3-testresources")
+    cxn.sudo("curl https://bootstrap.pypa.io/get-pip.py | sudo python3")
+    #cxn.sudo("curl --silent --show-error --retry 5 https://bootstrap.pypa.io/" "get-pip.py | sudo python3")
 
 def install_samba(cxn):
     cxn.sudo("apt-get -y install samba")
     _add_config_file(cxn, "smb.conf", "/etc/samba/smb.conf", "root")
-    cxn.sudo("/etc/init.d/samba restart")
+    cxn.sudo("/etc/init.d/samba-ad-dc restart")
 
     smbpass = Responder(pattern=r'SMB password:',
                          response='%s\n' % NEW_PASSWORD)
@@ -269,9 +268,9 @@ def install_samba(cxn):
 
 def install_extra_libs(cxn):
     cxn.sudo("apt-get update")
-    cxn.sudo("pip install wheel")
+    cxn.sudo("pip install --user wheel")
     cxn.sudo("pip install --upgrade pip")
-    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python-cryptography git cmake ntp autossh libxi6 libffi-dev")
+    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python3-distutils python3-testresources python-cryptography git cmake ntp autossh libxi6 libffi-dev")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
 
