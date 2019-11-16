@@ -29,7 +29,7 @@ Script and resources to build the ishiki sd card image
 
 ### Configure Pi for wifi/ssh access
 
-Raspian has some built in magic to help configure sd cards directly.
+Raspbian has some built in magic to help configure sd cards directly.
 Mount the flashed SD card on your PC and add two files to the boot folder
 
 * An empty file called `ssh`, this will turn on sshd
@@ -42,13 +42,13 @@ working on a network where the host broadcast works or other devious means.
 
 * Clone this repo locally
 * Create python 3 virtualenv
-* Install requirements.txt
+* Install requirements.txt: `pip install -r requirements.txt`
 
 ### Configure card build
 
 for ishiki card
 
-* Copy `config_local.py` from secrets into the root of the repo.
+* Copy `config_local.py` from secrets into the root of the repo
 * Edit your new local `config_local.py` to add the ip address of the pi
 * Copy the whole folder `secrets` in next to the root of this repo
 
@@ -56,7 +56,7 @@ for lushroom card
 
 * Rename config_local_lush.py to config_local.py
 * Manually edit the USERNAME at the top of bootstrap.bootstrap.py to "lush"
-* Edit your new local `config_local.py` to add the ip address of the pi and a password to use.
+* Edit your new local `config_local.py` to add the ip address of the pi and a password to use
 * create a folder called secrets next to the root of this repo and put the lrpi_id_rsa in there
 
 ### Build card with Fabric script
@@ -68,6 +68,7 @@ for lushroom card
 * Wait for pi to finish installing things and shut itself down
 * Remove the sd card from pi and take a copy of the image with `dd` something
  like `sudo dd if=/dev/rdisk2 of=/Users/paul/Documents/lush_prod.img bs=1m` but with a path on your machine
+* Optionally shrink the image, for instance with `https://github.com/qrti/shrink`
 
 
 ### Create Lushroom stand alone SD card image
@@ -83,9 +84,9 @@ Log in and pull down the docker images used by the stand alone configuration
 * lushdigital/lushroom-brickd:latest
 
 Then shutdown and copy card using dd as above. This is not taking advantage of the resizing for this card.
-Ideally It sould be done on a 4GB card with resizing reenabled I will automate this when I buy a 4GB card.
+Ideally It sould be done on a 4GB card with resizing reenabled.
 
-The stand alone settings.json are minimal
+The content of the stand alone `settings.json` is minimal:
 
 ```
 {
@@ -96,7 +97,7 @@ The stand alone settings.json are minimal
 }
 ```
 
-and the docker-comose should be:
+and the `docker-compose.yaml` should be:
 
 ```
 version: '3'
