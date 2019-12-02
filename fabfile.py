@@ -173,11 +173,17 @@ def update_boot_config(cxn, screen_name):
         install_kedei_drivers(cxn)
         config_filename = "kedei_config.txt"
         _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
+    elif screen_name == "tf_e_ink":
+        config_filename = "tf_e_ink_config.txt"
+        _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
     else:
         config_filename = "config.txt"
 
 
 def install_screen_drivers(cxn, screen_name):
+
+    # Possibly add an update to the bootstrap.py script here
+    # Or a new script that enables the correct MQTT drivers after brickd is up
 
     if screen_name == "waveshare":
         install_waveshare_drivers(cxn)

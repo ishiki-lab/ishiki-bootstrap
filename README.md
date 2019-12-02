@@ -33,9 +33,12 @@ Raspbian has some built in magic to help configure sd cards directly.
 Mount the flashed SD card on your PC and add two files to the boot folder
 
 * An empty file called `ssh`, this will turn on sshd
-* Copy the `wpa_supplicant.conf` file from the `boot` folder of this repo and update it with the ssis and psk of your local wifi.
+* Copy the `wpa_supplicant.conf` file from the `boot` folder of this repo and update it with the SSID and psk of your local wifi.
 * Determine the ip address of the pi, either by booting with a screen attatched,
 working on a network where the host broadcast works or other devious means.
+  * More info [here](https://www.raspberrypi.org/documentation/remote-access/ip-address.md)
+  * You can also connect to the pi via a direct connection from your computer's ethernet port. This works best on Linux systems and YMMV!
+  * If things are looking weird and connections aren't working, you may need to assign your host machine (i.e. not the Pi) a static IP, like [this](https://askubuntu.com/questions/282569/link-local-connection-to-device-not-working)
 
 
 ### Install local requirements
@@ -62,12 +65,12 @@ for lushroom card
 ### Build card with Fabric script
 
 * In terminal cd to the root of this repo
-* Run `fab prepare --screen=<screen_name>`. screen_name can be `waveshare` or `kedei`,
+* Run `fab prepare --screen=<screen_name>`. screen_name can be `waveshare`, `kedei` or `tf_e_ink`,
 * Wait for pi to reboot and settle down. NB the current build may take a long time building libsodium from source - just wait.
 * Run second part of build (mode can be dev or prod) `fab finish --mode=<mode> --screen=<screen_name>`. mode can be either `dev` or `prod`, screen_name can be `waveshare` or `kedei`,
 * Wait for pi to finish installing things and shut itself down
 * Remove the sd card from pi and take a copy of the image with `dd` something
- like `sudo dd if=/dev/rdisk2 of=/Users/paul/Documents/lush_prod.img bs=1m` but with a path on your machine
+ like `sudo dd if=/dev/rdisk2 of=/Users/paul/Documents/lush_prod.img bs=1M` but with a path on your machine
 * Optionally shrink the image, for instance with `https://github.com/qrti/shrink`
 
 

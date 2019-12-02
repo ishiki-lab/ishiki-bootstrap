@@ -3,6 +3,7 @@
 examples
 *env
 drivers
+*.zip
 
 # osx
 *.DS_Store
