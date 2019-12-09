@@ -41,6 +41,12 @@ working on a network where the host broadcast works or other devious means.
   * If things are looking weird and connections aren't working, you may need to assign your host machine (i.e. not the Pi) a static IP, like [this](https://askubuntu.com/questions/282569/link-local-connection-to-device-not-working)
 
 
+e.g. ubuntu settings:
+host static IP: 169.254.184.1
+netmask: 255.255.255.0
+gateway: 169.254.184.254
+
+
 ### Install local requirements
 
 * Clone this repo locally

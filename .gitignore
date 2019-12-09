@@ -4,6 +4,7 @@ examples
 *env
 drivers
 *.zip
+.vscode
 
 # osx
 *.DS_Store
