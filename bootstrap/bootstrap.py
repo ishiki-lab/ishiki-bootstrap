@@ -219,7 +219,9 @@ def set_hostname(new_hostname):
         subprocess.call(cmd, shell=True)
         cmd = "sed -i 's/%s/%s/g' /etc/hosts" % (current_hostname, new_hostname)
         subprocess.call(cmd, shell=True)
-        cmd = "hostname %s" % new_hostname
+        cmd = "" \
+              "" \
+              "# %s" % new_hostname
         subprocess.call(cmd, shell=True)
     else:
         print("Bootstrap: Host name already set to %s" % new_hostname)

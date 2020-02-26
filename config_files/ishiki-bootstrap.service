@@ -5,12 +5,11 @@ Description=Ishiki Bootstrap Service
 After=docker.service
 
 [Service]
-Type=simple
+Type=oneshot
 ExecStart=/opt/ishiki/bootstrap/start.sh
-TimeoutSec=0
-RestartSec=2
-Restart=always
-StandardOutput=journal+console
+RemainAfterExit=true
+ExecStop=/opt/ishiki/bootstrap/stop.sh
+StandardOutput=journal
 
 [Install]
 WantedBy=multi-user.target

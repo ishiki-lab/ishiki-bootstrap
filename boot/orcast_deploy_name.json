@@ -1,0 +1,11 @@
+{
+    "type": "deploy_key",
+    "id": "deploykey_6345a4f7-34d2-4a5d-a950-6e26d5f11a0f",
+    "created": "2020-01-22T17:01:20",
+    "name": "desk1",
+    "project": "desk",
+    "private_key": "",
+    "public_key": "",
+    "registration_url": "https://orca.st/deploy-key/deploykey_6345a4f7-34d2-4a5d-a950-6e26d5f11a0f/register",
+    "role": "desk-1"
+}

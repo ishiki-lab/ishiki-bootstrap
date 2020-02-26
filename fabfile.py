@@ -54,59 +54,8 @@ cert_cxn = Connection(host=origional_host,
                       },
                       port=22)
 
-RASPBIAN_VERSION = "2019-04-08-raspbian-stretch-lite"
+RASPBIAN_VERSION = "2019-09-26-raspbian-buster-lite"
 
-@task
-def settings(junk, number):
-
-    public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERTS_NAME)
-    private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERTS_NAME)
-
-    with open(public_key_file, "r") as f:
-        public_key = f.read()
-
-    with open(private_key_file, "r") as f:
-        private_key = f.read()
-
-    # private_key = private.exportKey('PEM').decode("utf-8")
-    # public_key = public.exportKey('OpenSSH').decode("utf-8")
-
-    device_uuid = str(uuid.uuid4())
-
-    name = "DSK-%s" % number
-
-    settings = {
-        "name": name,
-        "description": "An ishiki desk",
-        "url": "https://eightfitzroy.arupiot.com/ishiki/%s" % name,
-        "public_key": public_key,
-        "private_key": private_key,
-        "uuid": device_uuid,
-        "host_name": "ishiki-%s" % name,
-        "tunnel_host": "35.205.94.204",
-        "docker_tunnel_port": "%s" % (5000 + int(number)),
-        "admin_tunnel_port": "%s" % (7000 + int(number)),
-        "tunnel_user": "ishiki_tunnel",
-        "time_zone": "Europe/London",
-        "ssid": "nyquist-dev",
-        "psk": "D1git4lAcce55",
-        "eth0_address": "",
-        "eth0_netmask": "",
-        "eth0_gateway": "",
-        "wlan0_address": "",
-        "wlan0_netmask": "",
-        "wlan0_gateway": ""
-    }
-
-    usb_dir = os.path.join(USB_DIR, name)
-
-    if not os.path.exists(usb_dir):
-        os.makedirs(usb_dir)
-
-    path = os.path.join(usb_dir, "settings.json")
-
-    with open(path, "w") as f:
-        f.write(json.dumps(settings, sort_keys=True, indent=4))
 
 
 @task
@@ -120,6 +69,8 @@ def prepare(junk, screen=None):
                      connect_kwargs={"password": ORIGINAL_PASSWORD},
                      port=22)
 
+
+
     create_new_user(pi_cxn)
 
     new_user_cxn = Connection(host=origional_host,
@@ -132,10 +83,6 @@ def prepare(junk, screen=None):
     install_pip(cert_cxn)
     install_extra_libs(cert_cxn)
     install_docker(cert_cxn)
-    remove_bloat(cert_cxn)
-    configure_rsyslog(cert_cxn)
-    daily_reboot(cert_cxn)
-    _add_config_file(cert_cxn, "wpa_supplicant.backup", "/etc/wpa_supplicant/wpa_supplicant.backup", "root", chmod="644")
 
     # installing screen drivers as pi for waveshare quirks
     if screen:
@@ -150,13 +97,14 @@ def finish(junk, screen=None, mode="prod"):
 
     if mode == "prod":
         reduce_writes(cert_cxn)
-    else:
-        install_samba(cert_cxn)
+    # else:
+    #     install_samba(cert_cxn)
 
     set_ssh_config(cert_cxn, mode)
 
     delete_old_user(cert_cxn)
     add_bootstrap(cert_cxn)
+    _add_software_file(cert_cxn, "clean_wifi.py", "/opt/ishiki/bootstrap/clean_wifi.py", "root")
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
     set_hostname(cert_cxn)
     cert_cxn.sudo('shutdown now')
@@ -202,7 +150,10 @@ def delete_old_user(cxn):
 
 def create_new_user(cxn):
 
-    sudopass = Responder(pattern=r'UNIX password:',
+    sudopass = Responder(pattern=r'New password:',
+                         response='%s\n' % NEW_PASSWORD)
+
+    confirm = Responder(pattern=r'Retype new password:',
                          response='%s\n' % NEW_PASSWORD)
 
     accept = Responder(pattern=r'\[\]:',
@@ -211,7 +162,7 @@ def create_new_user(cxn):
     yes = Responder(pattern=r'\[Y/n\]',
                          response='\n')
 
-    cxn.sudo("adduser %s" % NEW_USERNAME, pty=True, watchers=[sudopass, accept, yes])
+    cxn.sudo("adduser %s" % NEW_USERNAME, pty=True, watchers=[sudopass, confirm, accept, yes])
 
     # make sudo
     cxn.sudo("usermod -aG sudo %s" % NEW_USERNAME)
@@ -228,11 +179,6 @@ def append_text(cxn, file_path, text):
 
 def command_in_dir(cxn, command, dir):
     cxn.sudo('sh -c "cd %s; %s"' % (dir, command))
-
-
-
-def configure_rsyslog(cxn):
-    _add_config_file(cxn, "rsyslog.conf", "/etc/rsyslog.conf", "root", chmod="644")
 
 
 def daily_reboot(cxn):
@@ -274,12 +220,10 @@ def install_samba(cxn):
 
 def install_extra_libs(cxn):
     cxn.sudo("apt-get update")
-    cxn.sudo("pip install --user wheel")
+    cxn.sudo("pip install wheel")
     cxn.sudo("pip install --upgrade pip")
-    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python3-distutils python3-testresources python-cryptography git cmake ntp autossh libxi6 libffi-dev")
+    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python-cryptography git cmake ntp autossh libxi6 libffi-dev")
     cxn.sudo("pip install pyudev")
-    cxn.sudo("pip install pyroute2")
-
 
 def install_docker(cxn):
 
@@ -289,7 +233,7 @@ def install_docker(cxn):
     # fix the docker host in json problem
     _add_config_file(cxn, "docker.service", "/lib/systemd/system/docker.service", "root", chmod=755)
 
-    # config deamon
+    # config deamon to use http host
     _add_config_file(cxn, "daemon.json", "/etc/docker/daemon.json", "root")
 
     # sets up service
@@ -300,17 +244,6 @@ def install_docker(cxn):
     # installs docker compose
     cxn.sudo("pip install docker-compose")
 
-
-def remove_bloat(cxn):
-    cxn.sudo('apt update')
-    cxn.sudo("apt-get -y remove --purge libreoffice*")
-    cxn.sudo("apt-get -y remove --purge wolfram*")
-    cxn.sudo("apt-get -y remove modemmanager")
-    cxn.sudo("apt-get -y remove --purge minecraft*")
-    cxn.sudo("apt-get -y purge --auto-remove scratch")
-    cxn.sudo("dpkg --remove flashplugin-installer")
-    cxn.sudo("apt-get clean")
-    cxn.sudo("apt-get autoremove")
 
 
 def set_hostname(cxn):
@@ -333,7 +266,7 @@ def _add_config_file(cxn, name, dst, owner, chmod=None):
 
 def _add_software_file(cxn, name, dst, owner, chmod=755):
 
-    cxn.put("bootstrap/%s" % name, "put_temp")
+    cxn.put("orcast_bootstrap/%s" % name, "put_temp")
     cxn.sudo("mv put_temp %s" % dst)
     cxn.sudo("chmod %s %s" % (chmod, dst))
     cxn.sudo("chown %s %s" % (owner, dst))
@@ -415,18 +348,19 @@ def add_bootstrap(cxn):
     cxn.sudo("mkdir -p /opt/ishiki/bootstrap")
 
     file_names = ["start.sh",
-                  "bootstrap.py",
+                  "stop.sh",
+                  "check_wifi.py",
                   "mount.py",
-                  "monitor.py",
-                  "clean_wifi.py",
-                  "resize_once.txt",
-                  "tunnel.service.template"
+                  "resize_once.txt"
                   ]
 
     for name in file_names:
         _add_software_file(cxn, name, "/opt/ishiki/bootstrap/%s" % name, "root")
 
     _add_config_file(cxn, "ishiki-bootstrap.service", "/etc/systemd/system/ishiki-bootstrap.service", "root", chmod=755)
+
+    cxn.sudo("mkdir -p /etc/opt/orcast")
+    _add_config_file(cxn, "orcast_conf.json", "/etc/opt/orcast/orcast_conf.json", "root", chmod=755)
 
     # sets up service
     cxn.sudo("systemctl enable ishiki-bootstrap")
