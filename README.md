@@ -62,7 +62,7 @@ for lushroom card
 ### Build card with Fabric script
 
 * In terminal cd to the root of this repo
-* Run `fab prepare --screen=<screen_name>`. screen_name can be `waveshare` or `kedei`,
+* Run `fab prepare --screen=<screen_name>`. screen_name can be `waveshare` or `kedei`: these screen names refer to the [waveshare 3.5" model B](https://www.waveshare.com/wiki/3.5inch_RPi_LCD_(B)) and [kedei 3.5"](http://kedei.net/raspberry/raspberry.html) touchscreens for the Raspberry Pi.
 * Wait for pi to reboot and settle down. NB the current build may take a long time building libsodium from source - just wait.
 * Run second part of build (mode can be dev or prod) `fab finish --mode=<mode> --screen=<screen_name>`. mode can be either `dev` or `prod`, screen_name can be `waveshare` or `kedei`,
 * Wait for pi to finish installing things and shut itself down

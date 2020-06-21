@@ -152,6 +152,7 @@ def finish(junk, screen=None, mode="prod"):
         reduce_writes(cert_cxn)
     else:
         install_samba(cert_cxn)
+        reduce_writes(cert_cxn)
 
     set_ssh_config(cert_cxn, mode)
 
@@ -170,7 +171,7 @@ def update_boot_config(cxn, screen_name):
         config_filename = "waveshare_config.txt"
         _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
     elif screen_name == "kedei":
-        install_kedei_drivers(cxn)
+        #install_kedei_drivers(cxn)
         config_filename = "kedei_config.txt"
         _add_config_file(cxn, config_filename, "/boot/config.txt", "root")
     else:
@@ -253,6 +254,7 @@ def install_pip(cxn):
     cxn.sudo("apt-get update")
     cxn.sudo("apt-get install -y curl python3-distutils python3-testresources")
     cxn.sudo("curl https://bootstrap.pypa.io/get-pip.py | sudo python3")
+    cxn.sudo("apt-get clean")
     #cxn.sudo("curl --silent --show-error --retry 5 https://bootstrap.pypa.io/" "get-pip.py | sudo python3")
 
 def install_samba(cxn):
@@ -264,16 +266,18 @@ def install_samba(cxn):
                          response='%s\n' % NEW_PASSWORD)
 
     cxn.sudo("smbpasswd -a %s" % NEW_USERNAME, pty=True, watchers=[smbpass])
+    cxn.sudo("apt-get clean")
 
 
 def install_extra_libs(cxn):
+    cxn.sudo("apt-get clean")
     cxn.sudo("apt-get update")
     cxn.sudo("pip install --user wheel")
     cxn.sudo("pip install --upgrade pip")
     cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python3-distutils python3-testresources python-cryptography git cmake ntp autossh libxi6 libffi-dev")
+    cxn.sudo("apt-get clean")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
-
 
 def install_docker(cxn):
 
