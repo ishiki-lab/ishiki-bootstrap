@@ -56,8 +56,93 @@ cert_cxn = Connection(host=origional_host,
 
 RASPBIAN_VERSION = "2019-04-08-raspbian-stretch-lite"
 
+
+
 @task
-def settings(junk, number):
+def reboot_now(junk):
+    """
+    Reboot the remote computer
+    """
+    pi_cxn = Connection(host=origional_host,
+                    user=ORIGINAL_USERNAME,
+                    connect_kwargs={"password": ORIGINAL_PASSWORD},
+                    port=22)
+
+    reboot(pi_cxn)
+
+@task
+def download_audio_samples(junk):
+    """
+    Download a selection of audio samples to /opt/audio
+    """
+
+    pi_cxn = Connection(host=origional_host,
+                    user=ORIGINAL_USERNAME,
+                    connect_kwargs={"password": ORIGINAL_PASSWORD},
+                    port=22)
+
+    pi_cxn.sudo("mkdir -p /opt/audio")
+    command_in_dir(pi_cxn, "wget http://www.hyperion-records.co.uk/audiotest/14%20Clementi%20Piano%20Sonata%20in%20D%20major,%20Op%2025%20No%206%20-%20Movement%202%20Un%20poco%20andante.MP3", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration.mp4", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration441-16b.wav", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration441AOT2.mp4", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU.mp4", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/SBR_LFEtest5_1.mp4", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/SBR_LFETest5_1-441-16b.wav", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/LFE-SBR.mp4", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader_v2_rtb.mp4", "/opt/audio")
+    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader%20v2.wav", "/opt/audio")    
+
+@task
+def waveshare_audio_install(junk):
+    """
+    Install waveshare drivers for audio hat
+    """
+    
+    pi_cxn = Connection(host=origional_host,
+                     user=ORIGINAL_USERNAME,
+                     connect_kwargs={"password": ORIGINAL_PASSWORD},
+                     port=22)
+
+    install_pip(pi_cxn)
+    install_extra_libs(pi_cxn)
+    waveshare_install_audio_support(pi_cxn)
+
+@task
+def pimoroni_audio_install(junk):
+    """
+    Install pimoroni drivers for audio hats
+    """
+    
+    pi_cxn = Connection(host=origional_host,
+                     user=ORIGINAL_USERNAME,
+                     connect_kwargs={"password": ORIGINAL_PASSWORD},
+                     port=22)
+
+    pimoroni_install_audio_support(pi_cxn)
+
+@task
+def docker_install(junk, username="pi"):
+    """
+    Install docker and docker-compose
+    """
+    
+    pi_cxn = Connection(host=origional_host,
+                     user=ORIGINAL_USERNAME,
+                     connect_kwargs={"password": ORIGINAL_PASSWORD},
+                     port=22)
+                     
+    install_pip(pi_cxn)
+    install_extra_libs(pi_cxn)
+    install_docker(pi_cxn, username)
+    install_dockercompose(pi_cxn)
+
+
+@task
+def ishiki_settings(junk, number):
+    """
+    Add settings file
+    """
 
     public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERTS_NAME)
     private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERTS_NAME)
@@ -77,8 +162,8 @@ def settings(junk, number):
 
     settings = {
         "name": name,
-        "description": "An ishiki desk",
-        "url": "https://eightfitzroy.arupiot.com/ishiki/%s" % name,
+        "description": "An ishiki device",
+        "url": "https://arupiot.com/ishiki/%s" % name,
         "public_key": public_key,
         "private_key": private_key,
         "uuid": device_uuid,
@@ -110,9 +195,9 @@ def settings(junk, number):
 
 
 @task
-def prepare(junk, screen=None):
+def ishiki_prepare(junk, screen=None):
     """
-    Prepares the base image
+    Prepare the base image
     """
 
     pi_cxn = Connection(host=origional_host,
@@ -144,7 +229,10 @@ def prepare(junk, screen=None):
 
 
 @task
-def finish(junk, screen=None, mode="prod"):
+def ishiki_finish(junk, screen=None, mode="prod"):
+    """
+    Finish the setup
+    """
 
     update_boot_config(cert_cxn, screen)
 
@@ -161,6 +249,7 @@ def finish(junk, screen=None, mode="prod"):
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
     set_hostname(cert_cxn)
     cert_cxn.sudo('shutdown now')
+
 
 
 ######################################################################
@@ -224,8 +313,6 @@ def append_text(cxn, file_path, text):
 def command_in_dir(cxn, command, dir):
     cxn.sudo('sh -c "cd %s; %s"' % (dir, command))
 
-
-
 def configure_rsyslog(cxn):
     _add_config_file(cxn, "rsyslog.conf", "/etc/rsyslog.conf", "root", chmod="644")
 
@@ -268,19 +355,21 @@ def install_samba(cxn):
     cxn.sudo("smbpasswd -a %s" % NEW_USERNAME, pty=True, watchers=[smbpass])
     cxn.sudo("apt-get clean")
 
-
 def install_extra_libs(cxn):
     cxn.sudo("apt-get clean")
     cxn.sudo("apt-get update")
+    cxn.sudo("apt-get -y upgrade")
     cxn.sudo("pip install --user wheel")
     cxn.sudo("pip install --upgrade pip")
-    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python3-distutils python3-testresources python-cryptography git cmake ntp autossh libxi6 libffi-dev")
+    cxn.sudo("apt-get -y install libssl-dev python-nacl python3-dev python3-distutils python3-testresources python3-pysodium python-cryptography git cmake ntp autossh libxi6 libffi-dev libsodium23 libsodium-dev")
     cxn.sudo("apt-get clean")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
 
-def install_docker(cxn):
-
+def install_docker(cxn, username=NEW_USERNAME):
+    """
+    Install Docker 
+    """
     # install docker
     cxn.sudo("curl -sSL get.docker.com | sh")
 
@@ -294,10 +383,24 @@ def install_docker(cxn):
     cxn.sudo("systemctl enable docker")
     # sudo("groupadd docker")
     # allows users to use to use docker
-    cxn.sudo("usermod -aG docker %s" % NEW_USERNAME)
-    # installs docker compose
-    cxn.sudo("pip install docker-compose")
+    cxn.sudo("usermod -aG docker %s" % username)
+    cxn.sudo("docker run --rm hello-world")
 
+def install_dockercompose(cxn):
+    """
+    Install Docker-Compose
+    """
+    # installs docker compose using pip - this is very long because of the libsodium dependency
+    #cxn.sudo("pip install -v docker-compose ")
+    # installs docker compose from a docker image https://github.com/KEINOS/Dockerfile_of_Docker-Compose_for_ARMv6l
+    # it is very slow but it works on armv6
+    cxn.sudo('curl -L --fail https://keinos.github.io/Dockerfile_of_Docker-Compose_for_ARMv6l/run.sh -o /usr/local/bin/docker-compose')
+    cxn.sudo("chmod +x /usr/local/bin/docker-compose")
+    cxn.sudo("docker-compose --version")
+    # the following code doesn't work on an armv6 architecture because there is no prebuilt binary for docker-compose
+    #cxn.sudo('curl -L "https://github.com/docker/compose/releases/download/1.28.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose')
+    #cxn.sudo("chmod +x /usr/local/bin/docker-compose")
+    #cxn.sudo("docker-compose --version")
 
 def remove_bloat(cxn):
     cxn.sudo('apt update')
@@ -315,8 +418,6 @@ def set_hostname(cxn):
     cxn.sudo("sed -i 's/%s/%s/g' /etc/hostname" % (ORIGINAL_HOSTNAME, NEW_HOSTNAME))
     cxn.sudo("sed -i 's/%s/%s/g' /etc/hosts" % (ORIGINAL_HOSTNAME, NEW_HOSTNAME))
     cxn.sudo("hostname %s" % NEW_HOSTNAME)
-
-
 
 def _add_config_file(cxn, name, dst, owner, chmod=None):
 
@@ -346,8 +447,10 @@ def _put_file(cxn, src, dst, owner, chmod=None):
     cxn.sudo("chown %s %s" % (owner, dst))
     cxn.sudo("chgrp %s %s" % (owner, dst))
 
-
 def reboot(cxn):
+    """
+    Reboot the remote computer
+    """
     print('System reboot')
     cxn.sudo('reboot now')
 #
@@ -359,8 +462,6 @@ def reboot(cxn):
 #     print('System halt')
 #     sudo('halt')
 #
-
-
 
 
 def reduce_writes(cxn):
@@ -432,19 +533,27 @@ def add_bootstrap(cxn):
 
 #################################################################
 
+def pimoroni_install_audio_support(cxn):
+    cxn.sudo('echo "\n### Pimoroni Audio Support" | sudo tee -a /boot/config.txt')
+    cxn.sudo('echo "dtoverlay=hifiberry-dac" | sudo tee -a /boot/config.txt')
+    cxn.sudo('echo "gpio=25=op,dh" | sudo tee -a /boot/config.txt')   
+    cxn.sudo('echo "dtparam=audio=off" | sudo tee -a /boot/config.txt')  
+
+def waveshare_install_audio_support(cxn):
+    cxn.sudo('mkdir -p /opt/waveshare')
+    cxn.sudo('sh -c "cd /opt/waveshare; git clone https://github.com/waveshare/WM8960-Audio-HAT"')
+    cxn.sudo('sh -c "cd /opt/waveshare/WM8960-Audio-HAT; ./install.sh"')
+
 def install_waveshare_drivers(cxn):
     waveshare_download_touchscreen_driver(cxn)
     waveshare_install_touchscreen_driver(cxn)
-
 
 def waveshare_download_touchscreen_driver(cxn):
     cxn.sudo('mkdir -p /opt/waveshare')
     # command_in_dir(cxn, "git clone https://github.com/waveshare/LCD-show.git", "/opt/waveshare")
     cxn.sudo("git clone https://github.com/waveshare/LCD-show.git")
 
-
 def waveshare_install_touchscreen_driver(cxn):
-
     # Enable I2C
     # See https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c#installing-kernel-support-manually
     cxn.sudo("mkdir -p /boot/overlays")

@@ -10,4 +10,5 @@ NEW_PASSWORD = "xxxxxx"
 NEW_HOSTNAME = "noname"
 
 CERTS_NAME = "ishiki_admin_id_rsa"
+TUNNEL_CERTS_NAME = None
 
