@@ -95,18 +95,19 @@ def download_audio_samples(junk):
     command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader%20v2.wav", "/opt/audio/test")    
 
 @task
-def audio_drivers_install(junk, audio=None):
+def rpi_audio_support_install(junk, audio=None):
     if audio=="pimoroni" or audio=="waveshare":
         install_audio_drivers(pi_cxn, audio)
     else:
-        print("Please provide an audio driver name (supported: pimoroni, waveshare")
+        print("Please provide a Raspberry Pi audio driver name (supported: pimoroni, waveshare")
+    pi_cxn.sudo("apt-get -y install omxplayer mpg123 mpg321 mplayer")
 
 @task
-def screen_drivers_install(junk, screen=None):
+def rpi_screen_support_install(junk, screen=None):
     if screen=="waveshare" or screen=="kedei":
         install_screen_drivers(pi_cxn, screen)
     else:
-        print("Please provide a screen driver name (supported: kedei, waveshare")
+        print("Please provide a Raspberry Pi screen driver name (supported: kedei, waveshare")
 
 @task
 def docker_install(junk, user_name=ORIGINAL_USERNAME):
@@ -150,7 +151,7 @@ def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zo
             "private_key": private_key,
             "uuid": device_uuid,
             "host_name": hostname,
-            "tunnel_host": "35.205.94.204",
+            "tunnel_host": "ishiki-rm.arupiot.com",
             "docker_tunnel_port": "%s" % (5000 + int(number)),
             "admin_tunnel_port": "%s" % (7000 + int(number)),
             "tunnel_user": "ishiki_tunnel",
@@ -268,9 +269,9 @@ def install_screen_drivers(cxn, screen_name):
 
 def install_audio_drivers(cxn, audio_name):
 
-    if screen_name == "waveshare":
+    if audio_name == "waveshare":
         waveshare_install_audio_support(cxn)
-    elif screen_name == "pimoroni":
+    elif audio_name == "pimoroni":
         pimoroni_install_audio_support(cxn)
 
 def delete_old_user(cxn):
