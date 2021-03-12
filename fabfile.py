@@ -186,9 +186,7 @@ def update_user(junk):
                      user=NEW_USERNAME,
                      connect_kwargs={"password": NEW_PASSWORD},
                      port=22)
-
     copy_certs(new_user_cxn)
-
     authorise_docker_user(new_user_cxn, username=NEW_USERNAME)
 
 @task
@@ -233,7 +231,7 @@ def ishiki_finish(junk, screen=None, mode="dev"):
 
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
 
-    delete_old_user(cert_cxn)
+    # delete_old_user(cert_cxn)
     
     cert_cxn.sudo('shutdown now')
 
@@ -360,7 +358,7 @@ def install_extra_libs(cxn):
     cxn.sudo("apt-get -y upgrade")
     cxn.sudo("pip install --user wheel")
     cxn.sudo("pip install --upgrade pip")
-    cxn.sudo("apt-get -y install avahi-daemon avahi-utils libssl-dev python-nacl python3-dev python3-distutils python3-testresources python3-pysodium python-cryptography git cmake ntp autossh libxi6 libffi-dev libsodium23 libsodium-dev")
+    cxn.sudo("apt-get -y install dos2unix avahi-daemon avahi-utils libssl-dev python-nacl python3-dev python3-distutils python3-testresources python3-pysodium python-cryptography git cmake ntp autossh libxi6 libffi-dev libsodium23 libsodium-dev")
     cxn.sudo("apt-get clean")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
@@ -371,6 +369,7 @@ def install_docker(cxn, user_name=NEW_USERNAME):
     """
     # install docker
     cxn.sudo("curl -sSL get.docker.com | sh")
+    #sudo apt-get install -y -qq --no-install-recommends docker-ce
 
     # fix the docker host in json problem
     _add_config_file(cxn, "docker.service", "/lib/systemd/system/docker.service", "root", chmod=755)
@@ -396,9 +395,9 @@ def install_dockercompose(cxn):
     Install Docker-Compose
     """
     # get architecture
-    architecture = pi_cxn.sudo("uname -m").stdout
-    print("Remote device system architecture:", architecture)
-    if architecture=='armv6l':
+    architecture = pi_cxn.sudo("uname -m").stdout.strip()
+    print("Remote device system architecture: -%s-" % architecture)
+    if architecture=='armv6l' or architecture=='armv7l':
         # installs docker compose from a docker image https://github.com/KEINOS/Dockerfile_of_Docker-Compose_for_ARMv6l
         # it is very slow but it works on armv6 without having to compile libsodium
         cxn.sudo('curl -L --fail https://keinos.github.io/Dockerfile_of_Docker-Compose_for_ARMv6l/run.sh -o /usr/local/bin/docker-compose')
