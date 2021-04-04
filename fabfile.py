@@ -1,4 +1,3 @@
-
 from fabric import Connection
 from invoke import Responder
 from fabric import task
@@ -21,10 +20,10 @@ from config import (NEW_PASSWORD,
                     ORIGINAL_USERNAME,
                     ACCESS_IP,
                     CERTS_NAME,
-                    TUNNEL_CERTS_NAME
+                    TUNNEL_CERTS_NAME,
                     )
 
-origional_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
+original_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
 new_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % NEW_HOSTNAME
 
 # default_hosts = ["%s:%s" % (default_host, 22)]
@@ -35,7 +34,7 @@ DRIVERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "drivers")
 USB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "usb"))
 
 if not os.path.exists(CERTS_DIR):
-    raise Exception("couldn't find certs")
+    raise Exception("Please add encryption keys in  the ../secrets/keys folder")
 
 
 def get_cert_path(private=False, certs_name=CERTS_NAME):
@@ -47,12 +46,12 @@ def get_cert_path(private=False, certs_name=CERTS_NAME):
 
 cert_path = get_cert_path(private=True)
 
-pi_cxn = Connection(host=origional_host,
+orig_cxn = Connection(host=original_host,
                 user=ORIGINAL_USERNAME,
                 connect_kwargs={"password": ORIGINAL_PASSWORD},
                 port=22)
 
-cert_cxn = Connection(host=origional_host,
+cert_cxn = Connection(host=original_host,
                       user=NEW_USERNAME,
                       connect_kwargs={
                           "key_filename": cert_path,
@@ -182,7 +181,7 @@ def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zo
 def update_user(junk):
     create_new_user(pi_cxn)
 
-    new_user_cxn = Connection(host=origional_host,
+    new_user_cxn = Connection(host=original_host,
                      user=NEW_USERNAME,
                      connect_kwargs={"password": NEW_PASSWORD},
                      port=22)
