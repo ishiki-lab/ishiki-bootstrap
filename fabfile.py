@@ -65,7 +65,7 @@ def sysinfo(junk):
     """
     Get the remote device system information
     """
-    info = pi_cxn.sudo("uname -a")
+    info = orig_cxn.sudo("uname -a")
     print("System information:", info.stdout)
 
 @task
@@ -73,38 +73,38 @@ def reboot_now(junk):
     """
     Reboot the remote computer
     """
-    reboot(pi_cxn)
+    reboot(orig_cxn)
 
 @task
 def download_audio_samples(junk):
     """
     Download a selection of audio samples to /opt/audio
     """
-    pi_cxn.sudo("mkdir -p /opt/audio")
-    pi_cxn.sudo("mkdir -p /opt/audio/test")
-    command_in_dir(pi_cxn, "wget http://www.hyperion-records.co.uk/audiotest/14%20Clementi%20Piano%20Sonata%20in%20D%20major,%20Op%2025%20No%206%20-%20Movement%202%20Un%20poco%20andante.MP3", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration.mp4", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration441-16b.wav", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration441AOT2.mp4", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU.mp4", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/SBR_LFEtest5_1.mp4", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/SBR_LFETest5_1-441-16b.wav", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/LFE-SBR.mp4", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader_v2_rtb.mp4", "/opt/audio/test")
-    command_in_dir(pi_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader%20v2.wav", "/opt/audio/test")    
+    orig_cxn.sudo("mkdir -p /opt/audio")
+    orig_cxn.sudo("mkdir -p /opt/audio/test")
+    command_in_dir(orig_cxn, "wget http://www.hyperion-records.co.uk/audiotest/14%20Clementi%20Piano%20Sonata%20in%20D%20major,%20Op%2025%20No%206%20-%20Movement%202%20Un%20poco%20andante.MP3", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration.mp4", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration441-16b.wav", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU-Narration441AOT2.mp4", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/ChID-BLITS-EBU.mp4", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/SBR_LFEtest5_1.mp4", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/SBR_LFETest5_1-441-16b.wav", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/LFE-SBR.mp4", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader_v2_rtb.mp4", "/opt/audio/test")
+    command_in_dir(orig_cxn, "wget https://www2.iis.fraunhofer.de/AAC/7.1auditionOutLeader%20v2.wav", "/opt/audio/test")    
 
 @task
 def rpi_audio_support_install(junk, audio=None):
     if audio=="pimoroni" or audio=="waveshare":
-        install_audio_drivers(pi_cxn, audio)
+        install_audio_drivers(orig_cxn, audio)
     else:
         print("Please provide a Raspberry Pi audio driver name (supported: pimoroni, waveshare")
-    pi_cxn.sudo("apt-get -y install omxplayer mpg123 mpg321 mplayer")
+    orig_cxn.sudo("apt-get -y install omxplayer mpg123 mpg321 mplayer")
 
 @task
 def rpi_screen_support_install(junk, screen=None):
     if screen=="waveshare" or screen=="kedei":
-        install_screen_drivers(pi_cxn, screen)
+        install_screen_drivers(orig_cxn, screen)
     else:
         print("Please provide a Raspberry Pi screen driver name (supported: kedei, waveshare")
 
@@ -113,10 +113,10 @@ def docker_install(junk, user_name=ORIGINAL_USERNAME):
     """
     Install docker and docker-compose
     """
-    install_pip(pi_cxn)
-    install_extra_libs(pi_cxn)
-    install_docker(pi_cxn, user_name)
-    install_dockercompose(pi_cxn)
+    install_pip(orig_cxn)
+    install_extra_libs(orig_cxn)
+    install_docker(orig_cxn, user_name)
+    install_dockercompose(orig_cxn)
 
 @task
 def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zone = "Europe/London"):
@@ -179,7 +179,7 @@ def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zo
 
 @task
 def update_user(junk):
-    create_new_user(pi_cxn)
+    create_new_user(orig_cxn)
 
     new_user_cxn = Connection(host=original_host,
                      user=NEW_USERNAME,
@@ -193,19 +193,19 @@ def ishiki_prepare(junk, screen=None, audio=None, mode="dev"):
     """
     Prepare the base ishiki device image
     """
-    install_pip(pi_cxn)
-    install_extra_libs(pi_cxn)
-    install_docker(pi_cxn, user_name=ORIGINAL_USERNAME)
-    install_dockercompose(pi_cxn)
-    remove_bloat(pi_cxn)
-    configure_rsyslog(pi_cxn)
-    daily_reboot(pi_cxn)
-    reduce_writes(pi_cxn)
+    install_pip(pi_corig_cxnxn)
+    install_extra_libs(orig_cxn)
+    install_docker(orig_cxn, user_name=ORIGINAL_USERNAME)
+    install_dockercompose(orig_cxn)
+    remove_bloat(orig_cxn)
+    configure_rsyslog(orig_cxn)
+    daily_reboot(orig_cxn)
+    reduce_writes(orig_cxn)
     if mode == "dev":
-        install_samba(pi_cxn, user_name=ORIGINAL_USERNAME, password=ORIGINAL_PASSWORD)
-    set_hostname(pi_cxn)
-    set_ssh_config(pi_cxn, mode)
-    pi_cxn.sudo('reboot now')
+        install_samba(orig_cxn, user_name=ORIGINAL_USERNAME, password=ORIGINAL_PASSWORD)
+    set_hostname(orig_cxn)
+    set_ssh_config(orig_cxn, mode)
+    orig_cxn.sudo('reboot now')
 
 
 @task
