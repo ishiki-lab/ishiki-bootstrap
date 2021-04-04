@@ -99,7 +99,7 @@ def rpi_audio_support_install(junk, audio=None):
         install_audio_drivers(orig_cxn, audio)
     else:
         print("Please provide a Raspberry Pi audio driver name (supported: pimoroni, waveshare")
-    orig_cxn.sudo("apt-get -y install omxplayer mpg123 mpg321 mplayer")
+    orig_cxn.sudo("apt-get update && apt-get -y install omxplayer mpg123 mpg321 mplayer")
 
 @task
 def rpi_screen_support_install(junk, screen=None):
@@ -193,7 +193,7 @@ def ishiki_prepare(junk, screen=None, audio=None, mode="dev"):
     """
     Prepare the base ishiki device image
     """
-    install_pip(pi_corig_cxnxn)
+    install_pip(orig_cxn)
     install_extra_libs(orig_cxn)
     install_docker(orig_cxn, user_name=ORIGINAL_USERNAME)
     install_dockercompose(orig_cxn)
