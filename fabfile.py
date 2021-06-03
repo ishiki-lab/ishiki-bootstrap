@@ -394,7 +394,7 @@ def install_dockercompose(cxn):
     Install Docker-Compose
     """
     # get architecture
-    architecture = pi_cxn.sudo("uname -m").stdout.strip()
+    architecture = cxn.sudo("uname -m").stdout.strip()
     print("Remote device system architecture: -%s-" % architecture)
     if architecture=='armv6l' or architecture=='armv7l':
         # installs docker compose from a docker image https://github.com/KEINOS/Dockerfile_of_Docker-Compose_for_ARMv6l

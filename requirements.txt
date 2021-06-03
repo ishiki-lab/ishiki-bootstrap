@@ -1,2 +1,2 @@
-fabric
+fabric==2.6.0
 patchwork
