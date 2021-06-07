@@ -5,7 +5,7 @@ Script and resources to build the ishiki sd card image
 
 ### Get and burn OS image
 
-* Get the latest image from lush_sd_images in the secrets folder
+* Get the latest image from the [Ishiki G-Drive](https://drive.google.com/drive/folders/1tEcEPm5kBUOxb5QJtNzzRXn4S44mObtE?usp=sharing).
 * Get [Etcher](https://www.balena.io/etcher/) to burn it with
 * Burn image to a mini SD card for use in Pi
 
@@ -16,6 +16,7 @@ Script and resources to build the ishiki sd card image
 * Plug the USB drive into the pi
 * Turn pi on
 * Wait
+* To Do - describe the provisioning process with Portainer
 * You might need to restart it the first time if it doesn't find the wifi
 
 
