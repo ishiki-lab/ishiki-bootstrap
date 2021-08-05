@@ -13,7 +13,7 @@ Creating an ishiki SD card image involves the following steps:
 4. copying the `config_local_template.py` file to `config_local.py` and editing the variables according to your needs, for instance using the correct IP address for the target device
 5. using `fab ishiki-prepare` to install the host operating system required components, including [docker](https://www.docker.com/)
 6. optionally using `rpi-audio-support-install` or `rpi-screen-support-install` to install audio and screen drivers if needed
-7. rebooting the device with `fab reboot-now`
+7. rebooting the device with `fab reboot-now` 
 8. using `fab ishiki-finish` to complete the user setup and enhance the security of the host operating system
 9. removing the SD card from the Raspberry Pi device and using a tool like [balenaEtcher](https://www.balena.io/etcher/) to generate an image file from the SD card - note that ishiki-prepare has options to allow device bootstrapping using files contained in the `boot` partition on in a USB stick that can be inserted into one of the USB ports of the target Raspberry Pi device
 
