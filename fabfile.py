@@ -1,26 +1,31 @@
+# Fabric configuration file for configuring Ishiki IoT devices
+# and creating their SD card images
+
 from fabric import Connection
 from invoke import Responder
 from fabric import task
 from patchwork.files import append
 import json
 import uuid
-
 import os
 import logging
+from pyfiglet import Figlet
 
 logging.raiseExceptions=False
 
+# RASPBIAN_VERSION = "2021-03-08-raspbian-buster-lite"
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-from config import (NEW_PASSWORD,
+from config import (NEW_HOSTNAME,
                     NEW_USERNAME,
-                    NEW_HOSTNAME,
+                    NEW_PASSWORD,
                     ORIGINAL_HOSTNAME,
                     ORIGINAL_PASSWORD,
                     ORIGINAL_USERNAME,
                     ACCESS_IP,
-                    CERTS_NAME,
-                    TUNNEL_CERTS_NAME,
+                    DEVICE_CERT_NAME,
+                    TUNNEL_CERT_NAME,
                     )
 
 original_host = ACCESS_IP if ACCESS_IP is not None else "%s.local" % ORIGINAL_HOSTNAME
@@ -33,11 +38,14 @@ CERTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "secre
 DRIVERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "drivers"))
 USB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "usb"))
 
+f1 = Figlet(font='standard')
+print(f1.renderText('ishiki bootstrap'))
+
 if not os.path.exists(CERTS_DIR):
     raise Exception("Please add encryption keys in  the ../secrets/keys folder")
 
 
-def get_cert_path(private=False, certs_name=CERTS_NAME):
+def get_cert_path(private=False, certs_name=DEVICE_CERT_NAME):
     if private:
         return os.path.join(CERTS_DIR, certs_name)
     else:
@@ -58,27 +66,30 @@ cert_cxn = Connection(host=original_host,
                       },
                       port=22)
 
-RASPBIAN_VERSION = "2021-03-08-raspbian-buster-lite"
 
 @task
 def sysinfo(junk):
     """
     Get the remote device system information
     """
+    print("System information:")
     info = orig_cxn.sudo("uname -a")
-    print("System information:", info.stdout)
+    print("\nDisk information:")
+    info = orig_cxn.sudo("df -h")
+    print("\nMemory information:")
+    info = orig_cxn.sudo("free -h")
 
 @task
 def reboot_now(junk):
     """
-    Reboot the remote computer
+    Reboot the remote device
     """
     reboot(orig_cxn)
 
 @task
 def download_audio_samples(junk):
     """
-    Download a selection of audio samples to /opt/audio
+    Download a selection of audio samples to the /opt/audio folder
     """
     orig_cxn.sudo("mkdir -p /opt/audio")
     orig_cxn.sudo("mkdir -p /opt/audio/test")
@@ -95,6 +106,9 @@ def download_audio_samples(junk):
 
 @task
 def rpi_audio_support_install(junk, audio=None):
+    """
+    Install audio support drivers (pimoroni or waveshare) on the remote Raspberry Pi device
+    """
     if audio=="pimoroni" or audio=="waveshare":
         install_audio_drivers(orig_cxn, audio)
     else:
@@ -103,6 +117,9 @@ def rpi_audio_support_install(junk, audio=None):
 
 @task
 def rpi_screen_support_install(junk, screen=None):
+    """
+    Install screen support drivers (kedei or waveshare) on the remote Raspberry Pi device
+    """
     if screen=="waveshare" or screen=="kedei":
         install_screen_drivers(orig_cxn, screen)
     else:
@@ -111,7 +128,7 @@ def rpi_screen_support_install(junk, screen=None):
 @task
 def docker_install(junk, user_name=ORIGINAL_USERNAME):
     """
-    Install docker and docker-compose
+    Install docker and docker-compose on the remote device
     """
     install_pip(orig_cxn)
     install_extra_libs(orig_cxn)
@@ -121,13 +138,13 @@ def docker_install(junk, user_name=ORIGINAL_USERNAME):
 @task
 def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zone = "Europe/London"):
     """
-    Add settings file
+    Generate setting files for bootstrapping devices at their first boot
     """
 
     if device_name!=None and host_name!=None and number!=None:
 
-        public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERTS_NAME)
-        private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERTS_NAME)
+        public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERT_NAME)
+        private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERT_NAME)
 
         with open(public_key_file, "r") as f:
             public_key = f.read()
@@ -179,6 +196,9 @@ def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zo
 
 @task
 def update_user(junk):
+    """
+    Create the specified new user
+    """
     create_new_user(orig_cxn)
 
     new_user_cxn = Connection(host=original_host,
@@ -189,7 +209,7 @@ def update_user(junk):
     authorise_docker_user(new_user_cxn, username=NEW_USERNAME)
 
 @task
-def ishiki_prepare(junk, screen=None, audio=None, mode="dev"):
+def ishiki_prepare(junk, screen=None, audio=None, mode="prod"):
     """
     Prepare the base ishiki device image
     """
@@ -209,7 +229,7 @@ def ishiki_prepare(junk, screen=None, audio=None, mode="dev"):
 
 
 @task
-def ishiki_finish(junk, screen=None, mode="dev"):
+def ishiki_finish(junk, screen=None, mode="prod", target="boot"):
     """
     Finish the ishiki device setup by enhancing security
     """
@@ -226,7 +246,7 @@ def ishiki_finish(junk, screen=None, mode="dev"):
     set_ssh_config(cert_cxn, mode)
 
     _add_config_file(cert_cxn, "wpa_supplicant.backup", "/etc/wpa_supplicant/wpa_supplicant.backup", "root", chmod="644")
-    add_bootstrap(cert_cxn)
+    add_bootstrap(cert_cxn, target)
 
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
 
