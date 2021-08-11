@@ -135,8 +135,12 @@ def docker_install(junk, user_name=ORIGINAL_USERNAME):
     install_docker(orig_cxn, user_name)
     install_dockercompose(orig_cxn)
 
+#TODO complete and adapt the settings generation function
 @task
-def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zone = "Europe/London"):
+def ishiki_settings(junk, device_name=None, host_name=None, number=None, 
+                    time_zone = "Europe/London", 
+                    portainer_username = "onboarding_username",
+                    portainer_password = "onboarding_password"):
     """
     Generate setting files for bootstrapping devices at their first boot
     """
@@ -163,8 +167,11 @@ def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zo
             "name": devicename,
             "description": "An ishiki device",
             "url": "https://arupiot.com/ishiki/%s" % name,
-            "public_key": public_key,
-            "private_key": private_key,
+            "portainer_url": "https://gateways.bos.arupiot.com",
+            "portainer_onboarding_username": portainer_username,
+            "portainer_onboarding_password": portainer_password,
+            "tunnel_public_key": public_key,
+            "tunnel_private_key": private_key,
             "uuid": device_uuid,
             "host_name": hostname,
             "tunnel_host": "ishiki-rm.arupiot.com",
@@ -190,7 +197,7 @@ def ishiki_settings(junk, device_name=None, host_name=None, number=None, time_zo
         path = os.path.join(usb_dir, "settings.json")
 
         with open(path, "w") as f:
-            f.write(json.dumps(settings, sort_keys=True, indent=4))
+            f.write(json.dumps(settings, sort_keys=False, indent=4))
     else:
         print("Please provide a device name, hostname and tunnel number")
 
@@ -537,23 +544,38 @@ def _remove_swap(cxn):
     cxn.sudo("rm /var/swap")
 
 
-def add_bootstrap(cxn):
+def add_bootstrap(cxn, target):
 
     cxn.sudo("mkdir -p /opt/ishiki/bootstrap")
 
-    file_names = ["start.sh",
-                  "bootstrap.py",
-                  "mount.py",
-                  "monitor.py",
-                  "clean_wifi.py",
-                  "resize_once.txt",
-                  "tunnel.service.template"
-                  ]
+    if target == "usb":
 
-    for name in file_names:
-        _add_software_file(cxn, name, "/opt/ishiki/bootstrap/%s" % name, "root")
+        file_names = ["start.sh",
+                    "bootstrap.py",
+                    "mount.py",
+                    "monitor.py",
+                    "clean_wifi.py",
+                    "resize_once.txt",
+                    "tunnel.service.template"
+                    ]
 
-    _add_config_file(cxn, "ishiki-bootstrap.service", "/etc/systemd/system/ishiki-bootstrap.service", "root", chmod=755)
+        for name in file_names:
+            _add_software_file(cxn, name, "/opt/ishiki/bootstrap/%s" % name, "root")
+
+        _add_config_file(cxn, "ishiki-bootstrap.service", "/etc/systemd/system/ishiki-bootstrap.service", "root", chmod=755)
+    
+    elif target == "boot":
+
+        file_names = ["start-boot.sh",
+                    "bootstrap-boot.py",
+                    "clean_wifi.py",
+                    "resize_once.txt",
+                    ]
+
+        for name in file_names:
+            _add_software_file(cxn, name, "/opt/ishiki/bootstrap/%s" % name, "root")
+
+        _add_config_file(cxn, "ishiki-bootstrap-boot.service", "/etc/systemd/system/ishiki-bootstrap.service", "root", chmod=755)
 
     # sets up service
     cxn.sudo("systemctl enable ishiki-bootstrap")

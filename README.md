@@ -59,10 +59,9 @@ Available tasks:
 
 ### Get and flash the OS image
 
-* Get the latest image from the [Ishiki G-Drive](https://drive.google.com/drive/folders/1tEcEPm5kBUOxb5QJtNzzRXn4S44mObtE?usp=sharing).
+* Get the latest relevant image from the [Ishiki G-Drive](https://drive.google.com/drive/folders/1tEcEPm5kBUOxb5QJtNzzRXn4S44mObtE?usp=sharing)
 * Get [Etcher](https://www.balena.io/etcher/) to flash it with
-* Flash the image to a mini SD card for use in Raspberry Pi
-
+* Flash the image to a mini SD card for use in the Raspberry Pi device
 
 ### Boot it up
 

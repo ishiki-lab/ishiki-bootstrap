@@ -5,7 +5,7 @@ from os import listdir, system, environ
 from dotenv import load_dotenv
 import pprint
 import logging
-from pyportainer import *
+# from pyportainer import *
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -26,7 +26,7 @@ else:
     PORTAINER_PASSWORD = 'password'
 
 
-# authenticate
+# authenticate portainer
 def portainer_authenticate(portainer_url, portainer_username, portainer_password):
     # http POST <portainer url>/api/users/admin/init Username="<admin username>" Password="<adminpassword>"
     data = {
@@ -35,7 +35,7 @@ def portainer_authenticate(portainer_url, portainer_username, portainer_password
     }
     logging.info("authenticating")
     #print(data)
-    rsp = requests.post(portainer_url+"/auth", json=data)
+    rsp = requests.post(portainer_url+"/auth", json=data, verify=False)
 
     #print(dir(rsp))
     print(rsp.headers)
@@ -68,7 +68,7 @@ def portainer_list_endpoints(portainer_url, access_token):
     #print(headers)
     # pp.pprint(headers)
 
-    rsp = requests.get(portainer_url+"/endpoints", headers=headers)
+    rsp = requests.get(portainer_url+"/endpoints", headers=headers, verify=False)
     # pp.pprint(rsp.headers)
     # pp.pprint(rsp.json())
     return(rsp.json())
@@ -91,7 +91,7 @@ def portainer_get_endpoint(portainer_url, access_token, id):
     #print(headers)
     # pp.pprint(headers)
 
-    rsp = requests.get(portainer_url+"/endpoints/%s" % id, headers=headers)
+    rsp = requests.get(portainer_url+"/endpoints/%s" % id, headers=headers, verify=False)
     # pp.pprint(rsp.headers)
     # pp.pprint(rsp.json())
     return(rsp.json())
@@ -114,7 +114,7 @@ def portainer_list_stacks(portainer_url, access_token):
     #print(headers)
     # pp.pprint(headers)
 
-    rsp = requests.get(portainer_url+"/stacks", headers=headers)
+    rsp = requests.get(portainer_url+"/stacks", headers=headers, verify=False)
     # pp.pprint(rsp.headers)
     # pp.pprint(rsp.json())
     return(rsp.json())
@@ -136,7 +136,7 @@ def portainer_list_endpoint_stacks(portainer_url, access_token, endpoint_id):
     #print(headers)
     # pp.pprint(headers)
 
-    rsp = requests.get(portainer_url+"/endpoints/%s/edge/stacks/1" % endpoint_id, headers=headers)
+    rsp = requests.get(portainer_url+"/endpoints/%s/edge/stacks/1" % endpoint_id, headers=headers, verify=False)
     # pp.pprint(rsp.headers)
     # pp.pprint(rsp.json())
     return(rsp.json())
@@ -156,7 +156,7 @@ def portainer_create_endpoint(portainer_url, access_token, endpoint_name, endpoi
         "URL": url
     }
 
-    rsp = requests.post(portainer_url+"/endpoints", headers=headers, data=data)
+    rsp = requests.post(portainer_url+"/endpoints", headers=headers, data=data, verify=False)
 
     pp.pprint(rsp.headers)
     pp.pprint(rsp.json())
@@ -186,7 +186,7 @@ def main():
     # portainer_create_endpoint(portainer_url, token, "test1", 1)
     # portainer_create_endpoint(portainer_url, token, "test2", 2)
     # portainer_create_endpoint(portainer_url, token, "test3", 3)
-    portainer_create_endpoint(portainer_url, token, "test1", 4, "https://gateways.bos.arupiot.com")
+    #portainer_create_endpoint(portainer_url, token, "test1", 4, "https://gateways.bos.arupiot.com")
 
 
 

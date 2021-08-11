@@ -1,26 +1,24 @@
 #!/bin/sh
 
 sleep 2
-echo "Ishiki USB drive bootstrap starting"
-python3 -u /opt/ishiki/bootstrap/bootstrap.py
+echo "Ishiki /boot folder bootstrap: starting"
+python3 -u /opt/ishiki/bootstrap/bootstrap-boot.py
 
 if [ -f /opt/ishiki/bootstrap/resize_once.txt ]; then
-    echo "resizing and rebooting"
+    echo "Ishiki /boot folder bootstrap: resizing and rebooting"
     rm /opt/ishiki/bootstrap/resize_once.txt
     raspi-config --expand-rootfs
     reboot now
     exit 0
 fi
 
-if [ -f /media/usb/docker-compose.yaml ]; then
-    echo "docker compose pull"
+if [ -f /boot/docker-compose.yaml ]; then
+    echo "Ishiki /boot folder bootstrap: docker compose pull"
     docker-compose -f /media/usb/docker-compose.yaml stop
     docker-compose -f /media/usb/docker-compose.yaml pull
-    echo "docker compose up"
+    echo "Ishiki /boot folder bootstrap: docker compose up"
     docker-compose -f /media/usb/docker-compose.yaml up --force-recreate -d
     docker system prune --force
 fi
 
-echo "monitoring usb"
-python3 /opt/ishiki/bootstrap/monitor.py
 exit 0

@@ -1,0 +1,16 @@
+# /etc/systemd/system/ishiki-bootstrap.service
+
+[Unit]
+Description=Ishiki Bootstrap Service
+After=docker.service
+
+[Service]
+Type=simple
+ExecStart=/opt/ishiki/bootstrap/start-boot.sh
+TimeoutSec=0
+RestartSec=2
+Restart=always
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
