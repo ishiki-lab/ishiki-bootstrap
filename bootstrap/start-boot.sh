@@ -14,10 +14,10 @@ fi
 
 if [ -f /boot/docker-compose.yaml ]; then
     echo "Ishiki /boot folder bootstrap: docker compose pull"
-    docker-compose -f /boot/docker-compose.yaml stop
-    docker-compose -f /boot/docker-compose.yaml pull
+    cd /boot ; docker-compose stop
+    cd /boot ; docker-compose pull
     echo "Ishiki /boot folder bootstrap: docker compose up"
-    docker-compose -f /boot/docker-compose.yaml up --force-recreate -d
+    cd /boot ; docker-compose up --force-recreate -d
     docker system prune --force
 fi
 
