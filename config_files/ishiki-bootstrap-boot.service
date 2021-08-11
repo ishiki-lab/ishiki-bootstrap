@@ -8,9 +8,11 @@ After=docker.service
 Type=simple
 ExecStart=/opt/ishiki/bootstrap/start-boot.sh
 TimeoutSec=0
-RestartSec=2
-Restart=always
 StandardOutput=journal+console
+Restart=on-failure
+RestartSec=30
+StartLimitInterval=350
+StartLimitBurst=10
 
 [Install]
 WantedBy=multi-user.target

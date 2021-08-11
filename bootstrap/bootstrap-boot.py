@@ -108,20 +108,49 @@ def start():
         edge_key = portainer_create_endpoint(portainer_full_url, token, device_name, 4, portainer_url)
 
         # create the Portainer Agent service
-        cmd = "docker run -d \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v /var/lib/docker/volumes:/var/lib/docker/volumes \
-            -v /:/host \
-            -v portainer_agent_data:/data \
-            --restart always \
-            -e EDGE=1 \
-            -e EDGE_ID=%s \
-            -e EDGE_KEY=%s \
-            -e CAP_HOST_MANAGEMENT=1 \
-            --name portainer_edge_agent \
-            portainer/agent" % (device_uuid, edge_key)
-        print(cmd)
-        subprocess.call(cmd, shell=True)
+        # print("Ishiki Bootstrap from /boot: Starting the Portainer Agent service")
+        # cmd = "docker run -d \
+        #     -v /var/run/docker.sock:/var/run/docker.sock \
+        #     -v /var/lib/docker/volumes:/var/lib/docker/volumes \
+        #     -v /:/host \
+        #     -v portainer_agent_data:/data \
+        #     --restart always \
+        #     -e EDGE=1 \
+        #     -e EDGE_ID=%s \
+        #     -e EDGE_KEY=%s \
+        #     -e CAP_HOST_MANAGEMENT=1 \
+        #     --name portainer_edge_agent \
+        #     portainer/agent" % (device_uuid, edge_key)
+        # print(cmd)
+        # subprocess.call(cmd, shell=True)
+
+        template = """
+version: '2'
+
+services:
+  portainer_edge_agent:
+    container_name: portainer_edge_agent
+    image: "portainer/agent:latest"
+    privileged: true
+    volumes:
+       - /var/run/docker.sock:/var/run/docker.sock
+       - /var/lib/docker/volumes:/var/lib/docker/volumes
+       - /:/host
+       - /portainer_agent_data:/data
+    restart: always
+    environment:
+      - EDGE=1
+      - EDGE_ID=%s
+      - EDGE_KEY=%s
+      - CAP_HOST_MANAGEMENT=1
+"""
+        docker_compose_content = template % (device_uuid, edge_key)
+        docker_compose_path = os.path.join(BOOT_DIR, "docker-compose.yaml")
+
+        with open(docker_compose_path, "w") as f:
+            f.write(docker_compose_content)
+
+        os.remove(settings_file)
 
     else:
         print("Ishiki Bootstrap from /boot: Ishiki settings.json file not found")

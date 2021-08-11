@@ -10,7 +10,7 @@
     "wlan0_address": "",
     "wlan0_netmask": "",
     "wlan0_gateway": "",
-    "captive_portal": "false",
+    "captive_portal": False,
 
     "eth0_address": "",
     "eth0_netmask": "",

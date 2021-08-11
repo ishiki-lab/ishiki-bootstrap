@@ -137,67 +137,79 @@ def docker_install(junk, user_name=ORIGINAL_USERNAME):
 
 #TODO complete and adapt the settings generation function
 @task
-def ishiki_settings(junk, device_name=None, host_name=None, number=None, 
+def ishiki_settings(junk, device_name=None, use_tunnel=False, 
                     time_zone = "Europe/London", 
-                    portainer_username = "onboarding_username",
-                    portainer_password = "onboarding_password"):
+                    wifi_ssid = "ssid",
+                    wifi_psk = "psk",
+                    captive_portal = False,
+                    portainer_url = "",
+                    portainer_username = "",
+                    portainer_password = ""):
     """
-    Generate setting files for bootstrapping devices at their first boot
+    Generate setting files for bootstrapping devices at their first boot. Please provide the options: device-name, wifi-ssid, wifi-psk, portainer-url, portainer-username, portainer-password
     """
 
-    if device_name!=None and host_name!=None and number!=None:
+    if device_name!=None:
 
-        public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERT_NAME)
-        private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERT_NAME)
+        public_key = ""
+        private_key = ""
 
-        with open(public_key_file, "r") as f:
-            public_key = f.read()
+        if use_tunnel:
+            public_key_file = get_cert_path(private=False, certs_name=TUNNEL_CERT_NAME)
+            private_key_file = get_cert_path(private=True, certs_name=TUNNEL_CERT_NAME)
 
-        with open(private_key_file, "r") as f:
-            private_key = f.read()
+            with open(public_key_file, "r") as f:
+                public_key = f.read()
 
-        # private_key = private.exportKey('PEM').decode("utf-8")
-        # public_key = public.exportKey('OpenSSH').decode("utf-8")
+            with open(private_key_file, "r") as f:
+                private_key = f.read()
+
+            # private_key = private.exportKey('PEM').decode("utf-8")
+            # public_key = public.exportKey('OpenSSH').decode("utf-8")
 
         device_uuid = str(uuid.uuid4())
 
-        # name = "DSK-%s" % number
-
         settings = {
-            "name": devicename,
-            "description": "An ishiki device",
-            "url": "https://arupiot.com/ishiki/%s" % name,
-            "portainer_url": "https://gateways.bos.arupiot.com",
-            "portainer_onboarding_username": portainer_username,
-            "portainer_onboarding_password": portainer_password,
-            "tunnel_public_key": public_key,
-            "tunnel_private_key": private_key,
+            "name": device_name,
             "uuid": device_uuid,
-            "host_name": hostname,
-            "tunnel_host": "ishiki-rm.arupiot.com",
-            "docker_tunnel_port": "%s" % (5000 + int(number)),
-            "admin_tunnel_port": "%s" % (7000 + int(number)),
-            "tunnel_user": "ishiki_tunnel",
+            "host_name": device_name.lower().replace("_","-"),
+            "description": "Ishiki IoT Device: %s" % device_name,
             "time_zone": time_zone,
-            "ssid": "xxxxxx",
-            "psk": "xxxxxx",
+
+            "ssid": wifi_ssid,
+            "psk": wifi_psk,
+            "wlan0_address": "",
+            "wlan0_netmask": "",
+            "wlan0_gateway": "",
+            "captive_portal": captive_portal,
+
             "eth0_address": "",
             "eth0_netmask": "",
             "eth0_gateway": "",
-            "wlan0_address": "",
-            "wlan0_netmask": "",
-            "wlan0_gateway": ""
+
+            "portainer_url": portainer_url,
+            "portainer_onboarding_username": portainer_username,
+            "portainer_onboarding_password": portainer_password,
+
+            "tunnel_host": "",
+            "tunnel_user": "",
+            "docker_tunnel_port": "",
+            "admin_tunnel_port": "",
+            "tunnel_public_key": "",
+            "tunnel_private_key": "",
+
+            "url": ""
         }
 
-        usb_dir = os.path.join(USB_DIR, name)
+        settings_path = os.path.join(os.getcwd(), "settings", device_name)
 
-        if not os.path.exists(usb_dir):
-            os.makedirs(usb_dir)
+        if not os.path.exists(settings_path):
+            os.makedirs(settings_path)
 
-        path = os.path.join(usb_dir, "settings.json")
+        path = os.path.join(settings_path, "settings.json")
 
         with open(path, "w") as f:
-            f.write(json.dumps(settings, sort_keys=False, indent=4))
+            f.write(json.dumps(settings, sort_keys=True, indent=4))
     else:
         print("Please provide a device name, hostname and tunnel number")
 
@@ -222,8 +234,6 @@ def ishiki_prepare(junk, screen=None, audio=None, mode="prod"):
     """
     install_pip(orig_cxn)
     install_extra_libs(orig_cxn)
-    install_docker(orig_cxn, user_name=ORIGINAL_USERNAME)
-    install_dockercompose(orig_cxn)
     remove_bloat(orig_cxn)
     configure_rsyslog(orig_cxn)
     daily_reboot(orig_cxn)
@@ -231,15 +241,16 @@ def ishiki_prepare(junk, screen=None, audio=None, mode="prod"):
     if mode == "dev":
         install_samba(orig_cxn, user_name=ORIGINAL_USERNAME, password=ORIGINAL_PASSWORD)
     set_hostname(orig_cxn)
-    set_ssh_config(orig_cxn, mode)
     orig_cxn.sudo('reboot now')
-
 
 @task
 def ishiki_finish(junk, screen=None, mode="prod", target="boot"):
     """
     Finish the ishiki device setup by enhancing security
     """
+
+    install_docker(orig_cxn, user_name=ORIGINAL_USERNAME)
+    install_dockercompose(orig_cxn)
 
     # remove the default user and add the ishiki user
     update_user(junk)
@@ -384,7 +395,7 @@ def install_extra_libs(cxn):
     cxn.sudo("apt-get -y upgrade")
     cxn.sudo("pip install --user wheel")
     cxn.sudo("pip install --upgrade pip")
-    cxn.sudo("apt-get -y install dos2unix avahi-daemon avahi-utils libssl-dev python-nacl python3-dev python3-distutils python3-testresources python3-pysodium python-cryptography git cmake ntp autossh libxi6 libffi-dev libsodium23 libsodium-dev")
+    cxn.sudo("apt-get -y install htop dos2unix avahi-daemon avahi-utils libssl-dev python-nacl python3-dev python3-distutils python3-testresources python3-pysodium python-cryptography git cmake ntp autossh libxi6 libffi-dev libsodium23 libsodium-dev")
     cxn.sudo("apt-get clean")
     cxn.sudo("pip install pyudev")
     cxn.sudo("pip install pyroute2")
@@ -394,8 +405,23 @@ def install_docker(cxn, user_name=NEW_USERNAME):
     Install Docker 
     """
     # install docker
-    cxn.sudo("curl -sSL get.docker.com | sh")
-    #sudo apt-get install -y -qq --no-install-recommends docker-ce
+    #cxn.sudo("curl -sSL get.docker.com | sh")
+    ##sudo apt-get install -y -qq --no-install-recommends docker-ce
+
+    cxn.sudo("apt update")
+    cxn.sudo("apt install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common")
+
+    # Get the Docker signing key for packages
+    cxn.sudo("curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo \"$ID\")/gpg | sudo apt-key add -")
+
+    # Add the Docker official repos
+    cxn.sudo("echo \"deb [arch=armhf] https://download.docker.com/linux/$(. /etc/os-release; echo \"$ID\") $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list")
+
+    # Install Docker
+    # The aufs package, part of the "recommended" packages, won't install on Buster just yet, because of missing pre-compiled kernel modules.
+    # We can work around that issue by using "--no-install-recommends"
+    cxn.sudo("sudo apt update")
+    cxn.sudo("sudo apt install -y --no-install-recommends docker-ce cgroupfs-mount")
 
     # fix the docker host in json problem
     _add_config_file(cxn, "docker.service", "/lib/systemd/system/docker.service", "root", chmod=755)
