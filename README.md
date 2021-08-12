@@ -6,6 +6,30 @@ This repository contains scripts and resources to build ishiki SD card images an
 * a toolbox bastion server via SSH 
 * a [Portainer](https://www.portainer.io/) server for remote docker container management.
 
+## Pre-requisites
+
+The Ishiki bootstrap process is based on the [Fabric](http://www.fabfile.org/) version 2 library, that helps automating the installation tasks.
+
+In order to use the Ishiki bootstrap process, please execute the following steps:
+
+1. Install [Python 3](https://www.python.org/downloads/). If you use a modern Linux system it is likely to be alredy installed.
+2. Install [virtualenv](https://virtualenv.pypa.io/en/latest/)
+3. Create a Python 3.6 or later virtual environment dedicated to fabric
+   ```
+   $ virtualenv -v -p python3.6 ~/py36 
+   ``` 
+4. Activate this virtual environment
+   ```
+   $ source ~/py36/bin/activate
+   ```
+5. Install the Python libraries dependencies:
+   
+   ```
+   (py36) $ python3 -m pip install -r requirements.txt
+   ```
+
+## Overview
+
 Creating an ishiki SD card image involves the following steps:
 1. downloading a [Raspberry Pi OS image](https://www.raspberrypi.org/software/operating-systems/) and flashing it onto an SD card with a tool like [balenaEtcher](https://www.balena.io/etcher/) - it is recommended not to use an SD card bigger than 4Gb in size so that the SD card image isn't bigger than target SD cards (typically SD card larger than 8GB are a good choice for the target Raspberry Pi)
 2. adding an empty `ssh` named file and optionally a [wpa_supplicant.conf](boot/wpa_supplicant.conf) file on the boot partition of the SD card to enable WiFi networking
@@ -20,7 +44,7 @@ Creating an ishiki SD card image involves the following steps:
 Once an ishiki SD card image is ready, setting up an ishiki IoT device involves the following steps:
 1. downloading the relevant SD card image for the target hardware from the [Ishiki G-Drive](https://drive.google.com/drive/folders/1tEcEPm5kBUOxb5QJtNzzRXn4S44mObtE?usp=sharing), or using the SD card image just generated with the previous steps
 2. flashing it on an SD card using a tool like [balenaEtcher](https://www.balena.io/etcher/)
-3. editing a `settings.json` file or creating a batch of `settings=#.json` files with `fab ishiki-settings` in case you are targeting more than a single device 
+3. editing a `settings.json` file or creating a batch of `settings.json` files with `fab ishiki-settings` in case you are targeting more than a single device 
 4. adding a `settings.json` file to the `boot` partition or to a USB stick depending on how the SD card has been prepared at the `ishiki-prepare` stage and inserting the USB stick into the Raspberry Pi device
 5. booting up the Raspberry Pi device and waiting for it to apply the configuration as outlined in the `settings.json` file.
 
@@ -63,22 +87,54 @@ Available tasks:
 * Get [Etcher](https://www.balena.io/etcher/) to flash it with
 * Flash the image to a mini SD card for use in the Raspberry Pi device
 
+#### Create a `settings.json` file for your IoT device
+
+The `settings.json` file can be edited directly using the [`settings_template.json`] file as a starting point.
+
+It can also be generated programmatically using a command line similar to the one below:
+
+```
+$ fab ishiki-settings --device-name=##-###-###_###-1 \
+                    --wifi-ssid=ssid \
+                    --wifi-psk=psk \
+                    --portainer-url=https://portainer.server.com \
+                    --portainer-username=username \
+                    --portainer-password=password
+```
+
+This creates a folder with the name of the device inside the `settings` folder. The `settings` folder should be created before executing this command.
+
 ### Boot it up
 
-TODO: add the boot vs USB process
+There are two options for bootstrapping a device:
+1. Putting a `settings.json` file in the `boot` partition
+2. Putting a `settings.json` file in a USB drive
+
+#### Bootstrapping from the `boot` partition
+
+* Put the SD card in your computer
+* Put the `settings.json` file inside the `boot` partition of the SD card
+* Unmount the SD card from your computer and put it in the Raspberry Pi
+* Plug the USB drive with the `settings.json` file into the Raspberry Pi
+* Turn the Raspberry Pi on
+* Wait
+* You might need to restart it the first time if it doesn't find the WiFi
+
+#### Bootstrapping from the USB drive
 
 * Put the SD card in the Raspberry Pi
-* Plug the USB drive into the Raspberry Pi
+* Plug the `settings.json` file inside the USB drive 
+* Plug the USB drive with the `settings.json` file into the Raspberry Pi
 * Turn the Raspberry Pi on
 * Wait
 * You might need to restart it the first time if it doesn't find the WiFi
 
 
-## Create a Fresh Raspian Base Image
+## Create a rresh Raspberry OS Base Image
 
 ### Get and burn OS image
 
-* Get the [latest raspian image](https://downloads.raspberrypi.org/raspbian_lite_latest)
+* Get the [latest Raspberry OS image](https://downloads.raspberrypi.org/raspbian_lite_latest)
 * Get [Etcher](https://www.balena.io/etcher/) to burn it with
 * Burn image to mini SD card for use in Pi
 
