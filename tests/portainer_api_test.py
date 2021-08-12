@@ -9,7 +9,6 @@ import logging
 
 pp = pprint.PrettyPrinter(indent=4)
 
-PORTAINER_URL = "https://gateways.bos.arupiot.com"
 API_URL = "/api"
 
 # get environment variables from .env file
@@ -24,6 +23,11 @@ if environ['PORTAINER_PASSWORD'] != '':
     PORTAINER_PASSWORD = environ['PORTAINER_PASSWORD']
 else:
     PORTAINER_PASSWORD = 'password'
+
+if environ['PORTAINER_URL'] != '':
+    PORTAINER_URL = environ['PORTAINER_URL']
+else:
+    PORTAINER_URL = ''
 
 
 # authenticate portainer
@@ -186,7 +190,7 @@ def main():
     # portainer_create_endpoint(portainer_url, token, "test1", 1)
     # portainer_create_endpoint(portainer_url, token, "test2", 2)
     # portainer_create_endpoint(portainer_url, token, "test3", 3)
-    #portainer_create_endpoint(portainer_url, token, "test1", 4, "https://gateways.bos.arupiot.com")
+    portainer_create_endpoint(portainer_url, token, "test1", 4, PORTAINER_URL)
 
 
 
