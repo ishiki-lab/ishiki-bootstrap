@@ -6,8 +6,8 @@ try:
                               ORIGINAL_USERNAME,
                               ORIGINAL_PASSWORD,
                               ACCESS_IP,
-                              CERTS_NAME,
-                              TUNNEL_CERTS_NAME
+                              DEVICE_CERT_NAME,
+                              TUNNEL_CERT_NAME
                               )
 
 except Exception as e:

@@ -16,3 +16,6 @@ __pycache__/
 .idea/
 
 usb/
+run.sh
+settings.json
+settings

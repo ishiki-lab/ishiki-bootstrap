@@ -10,9 +10,8 @@ NEW_USERNAME = "lush"
 NEW_PASSWORD = "xxxxxx"
 NEW_HOSTNAME = "noname"
 
-CERTS_NAME = "lrpi_id_rsa"
-
-TUNNEL_CERTS_NAME = None
+DEVICE_CERT_NAME = "lrpi_id_rsa"
+TUNNEL_CERT_NAME = None
 
 
 

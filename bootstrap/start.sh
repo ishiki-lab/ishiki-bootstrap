@@ -1,7 +1,7 @@
 #!/bin/sh
 
 sleep 2
-echo "bootstrap starting"
+echo "Ishiki USB drive bootstrap starting"
 python3 -u /opt/ishiki/bootstrap/bootstrap.py
 
 if [ -f /opt/ishiki/bootstrap/resize_once.txt ]; then

@@ -1,0 +1,31 @@
+{
+    "name": "ISHIKI-1",
+    "uuid": "990889b8-faae-11eb-a7e5-dca904870cd4",
+    "host_name": "ishiki-1",
+    "description": "Ishiki IoT Device",
+    "time_zone": "Europe/London",
+
+    "ssid": "wifi-ssid",
+    "psk": "wifi-password",
+    "wlan0_address": "",
+    "wlan0_netmask": "",
+    "wlan0_gateway": "",
+    "captive_portal": false,
+
+    "eth0_address": "",
+    "eth0_netmask": "",
+    "eth0_gateway": "",
+
+    "portainer_url": "",
+    "portainer_onboarding_username": "",
+    "portainer_onboarding_password": "",
+
+    "tunnel_host": "",
+    "tunnel_user": "",
+    "docker_tunnel_port": "",
+    "admin_tunnel_port": "",
+    "tunnel_public_key": "",
+    "tunnel_private_key": "",
+
+    "url": ""
+}
