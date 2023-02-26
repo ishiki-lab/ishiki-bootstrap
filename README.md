@@ -130,7 +130,7 @@ There are two options for bootstrapping a device:
 * You might need to restart it the first time if it doesn't find the WiFi
 
 
-## Create a rresh Raspberry OS Base Image
+## Create a fresh Raspberry OS Base Image
 
 ### Get and burn OS image
 
