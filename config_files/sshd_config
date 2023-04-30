@@ -92,5 +92,5 @@ UsePAM yes
 
 AuthorizedKeysFile	%h/.ssh/authorized_keys
 PasswordAuthentication no
-AllowUsers ishiki
+AllowUsers lush
 PermitRootLogin no

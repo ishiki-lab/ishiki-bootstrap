@@ -14,10 +14,10 @@ fi
 
 if [ -f /media/usb/docker-compose.yaml ]; then
     echo "docker compose pull"
-    docker-compose -f /media/usb/docker-compose.yaml stop
-    docker-compose -f /media/usb/docker-compose.yaml pull
+    cd /media/usb ; docker-compose stop
+    cd /media/usb ; docker-compose pull
     echo "docker compose up"
-    docker-compose -f /media/usb/docker-compose.yaml up --force-recreate -d
+    cd /media/usb ; docker-compose up --force-recreate -d
     docker system prune --force
 fi
 

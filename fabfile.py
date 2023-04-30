@@ -268,7 +268,7 @@ def ishiki_finish(junk, screen=None, mode="prod", target="usb"):
 
     cert_cxn.sudo("sudo python3 /opt/ishiki/bootstrap/clean_wifi.py")
 
-    # delete_old_user(cert_cxn)
+    delete_old_user(cert_cxn)
     
     cert_cxn.sudo('shutdown now')
 
