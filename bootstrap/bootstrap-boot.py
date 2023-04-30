@@ -12,6 +12,7 @@ import datetime
 
 BOOT_DIR = "/boot"
 USERNAME = "ishiki"
+# USERNAME = "lush"
 WPA_SUPPLICANT_FILE = "/etc/wpa_supplicant/wpa_supplicant.conf"
 API_URL = "/api"
 
@@ -174,6 +175,7 @@ def configure_ssh_tunnel(tunnel_host, tunnel_port, tunnel_user, dst_port, servic
     template_text = _replace_template_text(template_text, "tunnel_host", tunnel_host)
     template_text = _replace_template_text(template_text, "tunnel_port", tunnel_port)
     template_text = _replace_template_text(template_text, "dst_port", dst_port)
+    template_text = _replace_template_text(template_text, "local_user", USERNAME)
     conf_text = _replace_template_text(template_text, "tunnel_user", tunnel_user)
 
     conf_file_path = "/etc/systemd/system/%s.service" % service_name

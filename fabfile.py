@@ -241,16 +241,16 @@ def ishiki_prepare(junk, screen=None, audio=None, mode="prod"):
     if mode == "dev":
         install_samba(orig_cxn, user_name=ORIGINAL_USERNAME, password=ORIGINAL_PASSWORD)
     set_hostname(orig_cxn)
-    orig_cxn.sudo('reboot now')
+    # orig_cxn.sudo('reboot now')
 
 @task
-def ishiki_finish(junk, screen=None, mode="prod", target="boot"):
+def ishiki_finish(junk, screen=None, mode="prod", target="usb"):
     """
     Finish the ishiki device setup by enhancing security
     """
 
-    install_docker(orig_cxn, user_name=ORIGINAL_USERNAME)
-    install_dockercompose(orig_cxn)
+    #install_docker(orig_cxn, user_name=ORIGINAL_USERNAME)
+    #install_dockercompose(orig_cxn)
 
     # remove the default user and add the ishiki user
     update_user(junk)

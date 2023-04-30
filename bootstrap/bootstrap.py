@@ -9,7 +9,8 @@ import grp
 from mount import *
 
 MOUNT_DIR = "/media/usb"
-USERNAME = "ishiki"
+# USERNAME = "ishiki"
+USERNAME = "lush"
 WPA_SUPPLICANT_FILE = "/etc/wpa_supplicant/wpa_supplicant.conf"
 
 def start():
@@ -17,7 +18,7 @@ def start():
 
     # mount the usb
     if mount_usb():
-        print("Ishiki Bootstrap from USB drive: Found the ishiki USB")
+        print("Ishiki Bootstrap from USB drive: Found the Ishiki USB")
         settings_file = os.path.join(MOUNT_DIR, "settings.json")
 
         with open(settings_file, "r") as f:
@@ -105,6 +106,7 @@ def clear_old_wifi():
 
 
 def configure_ssh_tunnel(tunnel_host, tunnel_port, tunnel_user, dst_port, service_name):
+    global USERNAME
 
     cmd = "systemctl stop %s.service" % service_name
     subprocess.call(cmd, shell=True)
@@ -115,6 +117,7 @@ def configure_ssh_tunnel(tunnel_host, tunnel_port, tunnel_user, dst_port, servic
     template_text = _replace_template_text(template_text, "tunnel_host", tunnel_host)
     template_text = _replace_template_text(template_text, "tunnel_port", tunnel_port)
     template_text = _replace_template_text(template_text, "dst_port", dst_port)
+    template_text = _replace_template_text(template_text, "local_user", USERNAME)
     conf_text = _replace_template_text(template_text, "tunnel_user", tunnel_user)
 
     conf_file_path = "/etc/systemd/system/%s.service" % service_name

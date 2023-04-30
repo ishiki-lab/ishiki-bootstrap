@@ -4,7 +4,7 @@ After=network-online.target ssh.service
 
 [Service]
 Environment="AUTOSSH_GATETIME=0"
-ExecStart=/usr/bin/autossh -v -M 0 -N -R {{ tunnel_port }}:localhost:{{ dst_port }} -o "ServerAliveInterval 60" -o "ServerAliveCountMax 3" -o "StrictHostKeyChecking=no" -o "BatchMode=yes" -i /home/ishiki/.ssh/id_rsa  {{ tunnel_user }}@{{ tunnel_host }}
+ExecStart=/usr/bin/autossh -v -M 0 -N -R {{ tunnel_port }}:localhost:{{ dst_port }} -o "ServerAliveInterval 60" -o "ServerAliveCountMax 3" -o "StrictHostKeyChecking=no" -o "BatchMode=yes" -i /home/{{ local_user }}/.ssh/id_rsa  {{ tunnel_user }}@{{ tunnel_host }}
 ExecStop=/usr/bin/pkill -9 autossh
 TimeoutSec=10
 RestartSec=2
